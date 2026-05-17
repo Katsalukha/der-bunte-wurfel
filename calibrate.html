@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Der bunte Würfel – Brett-Kalibrierung</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:system-ui,"Trebuchet MS",sans-serif;background:#eef1fb;color:#1b2240;padding:14px}
+  h1{font-size:20px;margin-bottom:4px}
+  .sub{color:#5b6080;font-size:13px;margin-bottom:12px}
+  .layout{display:flex;gap:16px;align-items:flex-start;flex-wrap:wrap}
+  .stage{position:relative;display:inline-block;border:3px solid #2540b6;border-radius:10px;
+    overflow:hidden;background:#000;line-height:0}
+  .stage img{display:block;width:min(78vw,820px);height:auto;user-select:none;-webkit-user-drag:none}
+  #ov{position:absolute;inset:0;pointer-events:none}
+  .mk{position:absolute;transform:translate(-50%,-50%);font:bold 11px/1 system-ui;
+    pointer-events:none;white-space:nowrap}
+  .mk.ring{width:auto}
+  .mk .pt{display:flex;align-items:center;justify-content:center;
+    width:20px;height:20px;border-radius:50%;border:2px solid #fff;
+    box-shadow:0 0 0 1px #0008;color:#fff}
+  .mk .lbl{position:absolute;left:50%;top:-15px;transform:translateX(-50%);
+    background:#000a;color:#fff;border-radius:4px;padding:0 3px;font-size:9px}
+  .mk.end .pt{width:30px;height:30px;border-width:3px;background:transparent}
+  .mk.start .pt{box-shadow:0 0 0 3px #fff,0 0 0 6px #000}
+  .seg line{stroke:#ffffff88;stroke-width:1.5}
+
+  .panel{width:330px;max-width:94vw;background:#fff;border:3px solid #2540b6;
+    border-radius:12px;padding:14px}
+  .panel h2{font-size:15px;margin:14px 0 6px;border-top:1px dashed #cdd4f0;padding-top:10px}
+  .panel h2:first-child{border:0;margin-top:0;padding-top:0}
+  .row{display:flex;gap:6px;flex-wrap:wrap;margin:6px 0}
+  button{font:inherit;cursor:pointer;border:2px solid #c3cbed;background:#f4f6ff;
+    border-radius:8px;padding:7px 10px;font-weight:bold}
+  button:hover{background:#e9edff}
+  button.on{border-color:#43a047;background:#e3f6e6;box-shadow:0 0 0 2px #43a04733}
+  button.sym{font-size:18px;padding:6px 9px}
+  .ck{width:18px;height:18px;border-radius:4px;border:1px solid #0003;display:inline-block;vertical-align:-3px;margin-right:4px}
+  .status{font-size:13px;background:#f3f6ff;border-radius:8px;padding:8px;margin-top:8px;line-height:1.5}
+  .status b{color:#2540b6}
+  textarea{width:100%;height:120px;font-family:ui-monospace,monospace;font-size:11px;
+    border:2px solid #c3cbed;border-radius:8px;padding:8px;margin-top:6px}
+  .hint{font-size:12px;color:#5b6080;line-height:1.5;margin:6px 0}
+  .danger{border-color:#e53935;color:#e53935;background:#fdecec}
+  a.dl{display:inline-block;margin-top:6px;color:#1e88e5;font-weight:bold}
+  kbd{background:#222;color:#fff;border-radius:3px;padding:1px 5px;font-size:11px}
+</style>
+</head>
+<body>
+<h1>🎯 Brett-Kalibrierung – Der bunte Würfel</h1>
+<div class="sub">Klicke die Felder auf dem echten Foto an. Das Ergebnis (JSON) baue ich ins Spiel ein.
+Fortschritt wird automatisch lokal gespeichert.</div>
+
+<div class="layout">
+  <div class="stage" id="stage">
+    <img id="img" src="board.jpg" alt="Spielbrett" />
+    <svg id="seg" class="seg" style="position:absolute;inset:0;pointer-events:none"></svg>
+    <div id="ov"></div>
+  </div>
+
+  <div class="panel">
+    <h2>1 · Phase</h2>
+    <div class="row" id="phases">
+      <button data-ph="ring" class="on">① Ring (Reihenfolge)</button>
+      <button data-ph="start">② Start-Felder</button>
+      <button data-ph="end">③ Endpunkte</button>
+      <button data-ph="arm">④ Arme (optional)</button>
+    </div>
+
+    <div id="ringTools">
+      <h2>Symbol fürs nächste Ringfeld <span style="font-weight:normal;font-size:12px">(Tasten 1–6)</span></h2>
+      <div class="row" id="symRow"></div>
+      <div class="hint">Reihenfolge = Spielrichtung (im Uhrzeigersinn). Klicke die Ringfelder
+      <b>der Reihe nach</b> rundherum und wähle vorher jeweils das Symbol, das im Foto auf dem Feld zu sehen ist.</div>
+    </div>
+
+    <div id="colTools" style="display:none">
+      <h2>Farbe</h2>
+      <div class="row" id="colRow"></div>
+      <div class="hint" id="colHint"></div>
+    </div>
+
+    <h2>Aktionen</h2>
+    <div class="row">
+      <button id="undo">↶ Letzten Punkt zurück</button>
+      <button id="clearPhase">Phase leeren</button>
+      <button id="resetAll" class="danger">Alles zurücksetzen</button>
+    </div>
+
+    <div class="status" id="status"></div>
+
+    <h2>2 · Export</h2>
+    <div class="hint">Wenn fertig: „JSON erzeugen“, dann Text kopieren und mir schicken
+    (oder herunterladen).</div>
+    <div class="row">
+      <button id="gen" class="on">JSON erzeugen</button>
+      <button id="copy">📋 Kopieren</button>
+    </div>
+    <a class="dl" id="dl" style="display:none">⬇︎ board-mask.json herunterladen</a>
+    <textarea id="out" placeholder="Hier erscheint das JSON …"></textarea>
+
+    <h2>Wieder laden / bearbeiten</h2>
+    <div class="hint">Vorhandenes JSON hier einfügen und „Laden“, um weiterzubearbeiten.</div>
+    <textarea id="inp" placeholder="JSON einfügen zum Weiterbearbeiten …"></textarea>
+    <div class="row"><button id="load">Laden</button></div>
+  </div>
+</div>
+
+<script>
+(function(){
+  "use strict";
+  const SYMS=[["flower","🌸","#2db5c8"],["mushroom","🍄","#e5396a"],["ball","⚽","#5aa02f"],
+              ["snail","🐌","#e8862f"],["butterfly","🦋","#8e44c8"],["star","⭐","#f4b400"]];
+  const SYMMAP=Object.fromEntries(SYMS.map(s=>[s[0],s]));
+  const COLORS=[["red","#e53935","Rot"],["blue","#1e88e5","Blau"],
+                ["green","#43a047","Grün"],["yellow","#f9a825","Gelb"]];
+  const KEY="dbw_mask_v1";
+
+  let data={ image:"board.jpg", ring:[], starts:{}, endpoints:{}, arms:{red:[],blue:[],green:[],yellow:[]} };
+  let phase="ring", curSym="flower", curColor="red";
+
+  const stage=document.getElementById("stage");
+  const ov=document.getElementById("ov");
+  const seg=document.getElementById("seg");
+  const statusEl=document.getElementById("status");
+  const out=document.getElementById("out");
+
+  // build symbol + color buttons
+  const symRow=document.getElementById("symRow");
+  SYMS.forEach((s,i)=>{
+    const b=document.createElement("button");
+    b.className="sym"+(s[0]===curSym?" on":""); b.textContent=s[1]; b.title=s[0]+" ("+(i+1)+")";
+    b.dataset.sym=s[0];
+    b.onclick=()=>{curSym=s[0];syncSymBtns();};
+    symRow.appendChild(b);
+  });
+  function syncSymBtns(){ [...symRow.children].forEach(b=>b.classList.toggle("on",b.dataset.sym===curSym)); }
+
+  const colRow=document.getElementById("colRow");
+  COLORS.forEach(c=>{
+    const b=document.createElement("button");
+    b.className=(c[0]===curColor?"on":""); b.dataset.col=c[0];
+    b.innerHTML='<i class="ck" style="background:'+c[1]+'"></i>'+c[2];
+    b.onclick=()=>{curColor=c[0];syncColBtns();updateColHint();};
+    colRow.appendChild(b);
+  });
+  function syncColBtns(){ [...colRow.children].forEach(b=>b.classList.toggle("on",b.dataset.col===curColor)); }
+  function updateColHint(){
+    const h=document.getElementById("colHint");
+    if(phase==="start") h.innerHTML="Klicke auf das <b>farbige Startfeld</b> von <b>"+nameOf(curColor)+
+      "</b> (wird auf das nächste Ringfeld eingerastet).";
+    else if(phase==="end") h.innerHTML="Klicke, wo der <b>"+nameOf(curColor)+
+      "</b>-Endpunkt liegen soll (unter dem Fach – frei platzieren).";
+    else if(phase==="arm") h.innerHTML="Optional: Klicke die <b>"+nameOf(curColor)+
+      "</b>-Arm-Felder vom Ring nach innen bis zum Endpunkt (in Reihenfolge).";
+  }
+  function nameOf(c){ return (COLORS.find(x=>x[0]===c)||[])[2]||c; }
+
+  // phase switching
+  document.querySelectorAll("#phases button").forEach(b=>{
+    b.onclick=()=>{
+      phase=b.dataset.ph;
+      document.querySelectorAll("#phases button").forEach(x=>x.classList.toggle("on",x===b));
+      document.getElementById("ringTools").style.display = phase==="ring"?"":"none";
+      document.getElementById("colTools").style.display  = (phase==="ring")?"none":"";
+      updateColHint(); draw();
+    };
+  });
+
+  function rel(e){
+    const r=stage.getBoundingClientRect();
+    let x=(e.clientX-r.left)/r.width, y=(e.clientY-r.top)/r.height;
+    return {x:Math.min(1,Math.max(0,+x.toFixed(4))), y:Math.min(1,Math.max(0,+y.toFixed(4)))};
+  }
+  function nearestRingIdx(p){
+    let bi=-1,bd=1e9;
+    data.ring.forEach((q,i)=>{ const d=(q.x-p.x)**2+(q.y-p.y)**2; if(d<bd){bd=d;bi=i;} });
+    return bi;
+  }
+
+  stage.addEventListener("click",e=>{
+    if(e.target.id!=="img" && e.target.id!=="ov" && e.target!==stage && e.target.tagName!=="svg") return;
+    const p=rel(e);
+    if(phase==="ring"){ data.ring.push({x:p.x,y:p.y,sym:curSym}); }
+    else if(phase==="start"){
+      if(!data.ring.length){ alert("Bitte zuerst den Ring (Phase ①) setzen."); return; }
+      data.starts[curColor]=nearestRingIdx(p);
+    }
+    else if(phase==="end"){ data.endpoints[curColor]={x:p.x,y:p.y}; }
+    else if(phase==="arm"){ (data.arms[curColor]=data.arms[curColor]||[]).push({x:p.x,y:p.y}); }
+    save(); draw();
+  });
+
+  document.getElementById("undo").onclick=()=>{
+    if(phase==="ring") data.ring.pop();
+    else if(phase==="start") delete data.starts[curColor];
+    else if(phase==="end") delete data.endpoints[curColor];
+    else if(phase==="arm") (data.arms[curColor]||[]).pop();
+    save(); draw();
+  };
+  document.getElementById("clearPhase").onclick=()=>{
+    if(phase==="ring"){ data.ring=[]; data.starts={}; }
+    else if(phase==="start") data.starts={};
+    else if(phase==="end") data.endpoints={};
+    else if(phase==="arm") data.arms={red:[],blue:[],green:[],yellow:[]};
+    save(); draw();
+  };
+  document.getElementById("resetAll").onclick=()=>{
+    if(!confirm("Wirklich ALLES zurücksetzen?")) return;
+    data={ image:"board.jpg", ring:[], starts:{}, endpoints:{}, arms:{red:[],blue:[],green:[],yellow:[]} };
+    save(); draw();
+  };
+
+  function colHex(c){ return (COLORS.find(x=>x[0]===c)||[,"#888"])[1]; }
+
+  function draw(){
+    ov.innerHTML="";
+    // ring path lines
+    let segs="";
+    for(let i=1;i<data.ring.length;i++){
+      const a=data.ring[i-1],b=data.ring[i];
+      segs+=`<line x1="${a.x*100}%" y1="${a.y*100}%" x2="${b.x*100}%" y2="${b.y*100}%"/>`;
+    }
+    if(data.ring.length>2){const a=data.ring[data.ring.length-1],b=data.ring[0];
+      segs+=`<line x1="${a.x*100}%" y1="${a.y*100}%" x2="${b.x*100}%" y2="${b.y*100}%" stroke="#ffd54f"/>`;}
+    seg.innerHTML=segs;
+
+    const startIdx={}; for(const c in data.starts) startIdx[data.starts[c]]=c;
+
+    data.ring.forEach((q,i)=>{
+      const sm=SYMMAP[q.sym]||["?","?","#888"];
+      const d=document.createElement("div");
+      const sc=startIdx[i];
+      d.className="mk ring"+(sc?" start":"");
+      d.style.left=q.x*100+"%"; d.style.top=q.y*100+"%";
+      d.innerHTML='<div class="lbl">'+i+' '+sm[1]+(sc?' ◆'+nameOf(sc):'')+'</div>'+
+        '<div class="pt" style="background:'+sm[2]+'">'+(i+1)+'</div>';
+      ov.appendChild(d);
+    });
+    for(const c in data.endpoints){
+      const e=data.endpoints[c];
+      const d=document.createElement("div");
+      d.className="mk end"; d.style.left=e.x*100+"%"; d.style.top=e.y*100+"%";
+      d.innerHTML='<div class="lbl">'+nameOf(c)+'</div><div class="pt" style="border-color:'+colHex(c)+'">🏁</div>';
+      ov.appendChild(d);
+    }
+    for(const c in data.arms){ (data.arms[c]||[]).forEach((a,j)=>{
+      const d=document.createElement("div");
+      d.className="mk"; d.style.left=a.x*100+"%"; d.style.top=a.y*100+"%";
+      d.innerHTML='<div class="pt" style="width:13px;height:13px;background:'+colHex(c)+'"></div>';
+      ov.appendChild(d);
+    });}
+    renderStatus();
+  }
+
+  function renderStatus(){
+    const need=COLORS.map(c=>c[0]);
+    const miss=[];
+    need.forEach(c=>{ if(data.starts[c]==null) miss.push(nameOf(c)+"-Start");
+                      if(!data.endpoints[c]) miss.push(nameOf(c)+"-Endpunkt"); });
+    statusEl.innerHTML=
+      "Phase: <b>"+phase+"</b><br>"+
+      "Ringfelder: <b>"+data.ring.length+"</b><br>"+
+      "Starts gesetzt: <b>"+Object.keys(data.starts).length+"/4</b> · "+
+      "Endpunkte: <b>"+Object.keys(data.endpoints).length+"/4</b><br>"+
+      (miss.length? '<span style="color:#e53935">Fehlt noch: '+miss.join(", ")+'</span>'
+                   : '<span style="color:#43a047">✓ vollständig – bereit zum Export</span>');
+  }
+
+  // persistence
+  function save(){ try{ localStorage.setItem(KEY, JSON.stringify(data)); }catch(e){} }
+  function load(){ try{ const s=localStorage.getItem(KEY); if(s) data=JSON.parse(s); }catch(e){} }
+
+  // export / import
+  document.getElementById("gen").onclick=()=>{
+    out.value=JSON.stringify(data);
+    const blob=new Blob([out.value],{type:"application/json"});
+    const a=document.getElementById("dl");
+    a.href=URL.createObjectURL(blob); a.download="board-mask.json"; a.style.display="inline-block";
+  };
+  document.getElementById("copy").onclick=async()=>{
+    if(!out.value) out.value=JSON.stringify(data);
+    try{ await navigator.clipboard.writeText(out.value); document.getElementById("copy").textContent="✓ Kopiert"; }
+    catch(e){ out.select(); document.execCommand("copy"); }
+    setTimeout(()=>document.getElementById("copy").textContent="📋 Kopieren",1500);
+  };
+  document.getElementById("load").onclick=()=>{
+    try{
+      const d=JSON.parse(document.getElementById("inp").value);
+      data=Object.assign({ image:"board.jpg", ring:[], starts:{}, endpoints:{}, arms:{red:[],blue:[],green:[],yellow:[]} }, d);
+      save(); draw();
+    }catch(e){ alert("Ungültiges JSON: "+e.message); }
+  };
+
+  // keyboard 1-6 to pick symbol
+  window.addEventListener("keydown",e=>{
+    const n=parseInt(e.key,10);
+    if(n>=1&&n<=6){ curSym=SYMS[n-1][0]; syncSymBtns(); }
+    if(e.key==="z"&&(e.metaKey||e.ctrlKey)){ document.getElementById("undo").click(); }
+  });
+
+  load(); updateColHint(); draw();
+})();
+</script>
+</body>
+</html>

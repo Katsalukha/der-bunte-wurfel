@@ -1,0 +1,508 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Der bunte Würfel</title>
+<meta name="description" content="Der bunte Würfel – das DDR-Brettspiel von VEB Plasticart, digital auf dem Originalbrett. Gegen 1–3 Bots." />
+<style>
+  :root{--red:#e53935;--blue:#1e88e5;--green:#43a047;--yellow:#fdd835;
+    --board-bg:#2540b6;--ink:#1b2240}
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{font-family:"Comic Sans MS","Trebuchet MS",system-ui,sans-serif;
+    background:radial-gradient(circle at 30% 20%,#fff7d6,#ffe1ef 60%,#d6e7ff);
+    color:var(--ink);min-height:100%;padding:14px;
+    display:flex;flex-direction:column;align-items:center}
+  h1{font-size:clamp(22px,5vw,40px);color:#fff;
+    text-shadow:2px 2px 0 #e53935,4px 4px 0 #1e88e5;
+    letter-spacing:1px;margin:6px 0 2px;text-align:center}
+  .tag{color:#5b6080;font-size:13px;margin-bottom:12px;text-align:center}
+
+  #setup{background:#fff;border:4px solid var(--board-bg);border-radius:18px;
+    padding:22px 26px;max-width:480px;text-align:center;
+    box-shadow:0 10px 30px rgba(0,0,0,.18)}
+  #setup p{margin:10px 0;font-size:15px;line-height:1.45}
+  .opts{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin:16px 0}
+  .opt{border:3px solid #cfd6f5;background:#f3f6ff;border-radius:14px;
+    padding:14px 18px;cursor:pointer;font:inherit;font-weight:bold;
+    transition:.15s;min-width:96px}
+  .opt:hover{transform:translateY(-2px)}
+  .opt.sel{border-color:var(--green);background:#e3f6e6;box-shadow:0 0 0 3px #43a04733}
+  button.play{margin-top:8px;background:var(--green);color:#fff;border:none;
+    padding:14px 30px;border-radius:30px;font:inherit;font-weight:bold;
+    font-size:18px;cursor:pointer;box-shadow:0 6px 0 #2f7a35}
+  button.play:active{transform:translateY(3px);box-shadow:0 3px 0 #2f7a35}
+
+  #game{display:none;width:100%;max-width:1200px}
+  .wrap{display:flex;gap:18px;flex-wrap:wrap;justify-content:center;align-items:flex-start}
+
+  .board-shell{position:relative;width:min(94vw,860px);
+    border:8px solid #fff;border-radius:14px;
+    box-shadow:0 12px 30px rgba(0,0,0,.25);background:#fff;line-height:0}
+  #boardImg{width:100%;height:auto;display:block;border-radius:7px}
+  #layer{position:absolute;inset:0;pointer-events:none}
+  #guides{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+
+  .epm{position:absolute;transform:translate(-50%,-50%);
+    width:5.4%;aspect-ratio:1;border-radius:50%;
+    display:flex;align-items:center;justify-content:center;
+    font-size:min(2.6vw,17px);border:3px solid #fff;
+    box-shadow:0 0 0 3px #0006,0 2px 5px #0007}
+  .epm.red{background:var(--red)}   .epm.blue{background:var(--blue)}
+  .epm.green{background:var(--green)}.epm.yellow{background:#f9a825}
+
+  .piece{position:absolute;transform:translate(-50%,-50%);
+    width:3.6%;aspect-ratio:1;border-radius:50%;
+    border:2px solid #fff;box-shadow:0 2px 4px rgba(0,0,0,.55);
+    transition:left .26s ease,top .26s ease;z-index:6}
+  .piece.red{background:var(--red)}   .piece.blue{background:var(--blue)}
+  .piece.green{background:var(--green)}.piece.yellow{background:var(--yellow)}
+  .piece.sel{cursor:pointer;pointer-events:auto;
+    box-shadow:0 0 0 3px #fff,0 0 0 6px #ffeb3b;animation:pulse 1s infinite}
+  @keyframes pulse{50%{transform:translate(-50%,-50%) scale(1.22)}}
+
+  .panel{background:#fff;border:4px solid var(--board-bg);border-radius:18px;
+    padding:16px;width:290px;max-width:92vw;box-shadow:0 10px 24px rgba(0,0,0,.15)}
+  .turn{font-size:17px;font-weight:bold;text-align:center;margin-bottom:10px}
+  .dot{display:inline-block;width:14px;height:14px;border-radius:50%;
+    border:2px solid #fff;box-shadow:0 0 0 1px #999;vertical-align:-2px;margin-right:6px}
+  #die{width:96px;height:96px;margin:6px auto 4px;border-radius:18px;
+    background:linear-gradient(145deg,#fff,#ffe6f0);border:4px solid var(--board-bg);
+    display:flex;align-items:center;justify-content:center;font-size:48px;
+    box-shadow:0 6px 0 #b9c2ee}
+  #die.rolling{animation:shake .5s}
+  @keyframes shake{0%,100%{transform:rotate(0)}25%{transform:rotate(-14deg) scale(1.06)}75%{transform:rotate(14deg) scale(1.06)}}
+  .dieval{text-align:center;font-weight:bold;min-height:20px;margin-bottom:8px}
+  button.roll{width:100%;background:var(--blue);color:#fff;border:none;
+    padding:14px;border-radius:14px;font:inherit;font-weight:bold;font-size:17px;
+    cursor:pointer;box-shadow:0 5px 0 #16609f}
+  button.roll:active:not(:disabled){transform:translateY(3px);box-shadow:0 2px 0 #16609f}
+  button.roll:disabled{filter:grayscale(.6);opacity:.6;cursor:default}
+  .hint{font-size:13px;text-align:center;color:#5b6080;min-height:34px;margin:8px 2px}
+  #log{margin-top:10px;background:#f3f6ff;border-radius:10px;padding:8px 10px;
+    height:140px;overflow:auto;font-size:13px;line-height:1.5}
+  #log div{padding:1px 0;border-bottom:1px dashed #dde3f7}
+  .vorrat{width:184px}
+  .vorrat .ttl{font-size:17px;font-weight:bold;text-align:center;margin-bottom:8px}
+  .vrow{display:flex;align-items:center;gap:6px;margin:9px 0;flex-wrap:wrap}
+  .vname{font-weight:bold;font-size:13px;min-width:74px}
+  .vtokens{display:flex;gap:4px;flex-wrap:wrap}
+  .vtoken{width:16px;height:16px;border-radius:50%;border:2px solid #fff;
+    box-shadow:0 1px 2px rgba(0,0,0,.35);display:inline-block}
+  .vtoken.red{background:var(--red)}   .vtoken.blue{background:var(--blue)}
+  .vtoken.green{background:var(--green)}.vtoken.yellow{background:var(--yellow)}
+  .vempty{font-size:12px;color:#5b6080}
+  .small{font-size:12px;color:#5b6080;margin-top:10px;text-align:center}
+  .small a{color:var(--blue);cursor:pointer;text-decoration:underline}
+  details{margin-top:12px;font-size:13px;background:#fff;border:3px solid var(--board-bg);
+    border-radius:14px;padding:10px 14px;max-width:680px}
+  summary{cursor:pointer;font-weight:bold}
+  details p{margin:8px 0;line-height:1.5}
+  details ul{margin:8px 0 8px 18px;line-height:1.55}
+
+  #over{display:none;position:fixed;inset:0;background:rgba(20,25,60,.78);
+    z-index:50;align-items:center;justify-content:center;padding:20px}
+  #over .card{background:#fff;border-radius:22px;padding:30px 34px;text-align:center;
+    max-width:380px;border:6px solid var(--green)}
+  #over h2{font-size:26px;margin-bottom:10px}
+  #over button{margin-top:16px;background:var(--green);color:#fff;border:none;
+    padding:12px 26px;border-radius:24px;font:inherit;font-weight:bold;cursor:pointer}
+  @media(max-width:780px){.panel{width:min(560px,92vw)}}
+</style>
+</head>
+<body>
+
+<h1>🎲 Der bunte Würfel 🐘</h1>
+<div class="tag">Auf dem Originalbrett · VEB Plasticart Annaberg-Buchholz · gegen 1–3 Bots</div>
+
+<div id="setup">
+  <p><b>Willkommen!</b> Du spielst <b style="color:#e53935">Rot</b>. Würfelst du die
+  <b>🌸 Blume</b>, kommt eine Figur ins Spiel. Bei jedem anderen Symbol ziehst du eine
+  Figur <b>vorwärts zum nächsten Feld mit genau diesem Symbol</b>.</p>
+  <p>Bring als Erster alle 4 Figuren in deinen farbigen Endpunkt!</p>
+  <p>Wie viele Bot-Gegner möchtest du?</p>
+  <div class="opts" id="botOpts">
+    <button class="opt sel" data-bots="1">1 Bot</button>
+    <button class="opt" data-bots="2">2 Bots</button>
+    <button class="opt" data-bots="3">3 Bots</button>
+  </div>
+  <button class="play" id="startBtn">Spiel starten ▶</button>
+</div>
+
+<div id="game">
+  <div class="wrap">
+    <div class="vorrat panel">
+      <div class="ttl">🎒 Vorrat</div>
+      <div id="vorratRows"></div>
+      <div class="small">Figuren, die noch ins Spiel müssen – kommen bei 🌸 Blume aufs Startfeld.</div>
+    </div>
+    <div class="board-shell">
+      <img id="boardImg" src="board.jpg" alt="Der bunte Würfel – Originalspielbrett" />
+      <svg id="guides" viewBox="0 0 1000 622" preserveAspectRatio="none"></svg>
+      <div id="layer"></div>
+    </div>
+    <div class="panel">
+      <div class="turn" id="turnLbl">—</div>
+      <div id="die">🎲</div>
+      <div class="dieval" id="dieVal">&nbsp;</div>
+      <button class="roll" id="rollBtn">Würfeln</button>
+      <div class="hint" id="hint">Drücke „Würfeln“.</div>
+      <div id="log"></div>
+      <div class="small"><a id="restart">↻ Neues Spiel</a></div>
+    </div>
+  </div>
+
+  <details>
+    <summary>📜 Original-Spielregeln (VEB Plasticart) & Hinweise</summary>
+    <p><b>Der bunte Würfel</b> – ein Würfelspiel für Vorschulkinder ab dem 4. Lebensjahr.
+    Würfel und Spielfeld tragen 6 Bilder: 🌸 Blume · 🍄 Pilz · ⚽ Ball · 🐌 Schnecke ·
+    ⭐ Stern · 🦋 Schmetterling.</p>
+    <p><b>Bewegung:</b> Kein Zählen – du würfelst ein Symbol und ziehst deine Figur
+    <b>vorwärts bis zum nächsten Feld mit genau diesem Symbol</b> (im Uhrzeigersinn).</p>
+    <p><b>🌸 Blume = Einsetzen:</b> Eine Figur kommt auf dein farbiges Ausgangsfeld –
+    und du darfst gleich noch einmal würfeln. So lange, bis alle Figuren im Spiel sind.</p>
+    <p><b>Nur 1 Figur pro Feld:</b> Steht auf dem Zielfeld bereits eine <i>eigene</i>
+    Figur, darf dort keine zweite hin – du musst eine andere Figur ziehen. Steht dort
+    eine <i>fremde</i> Figur, wird sie geschlagen und kommt zurück in den Vorrat.</p>
+    <p><b>Ziel:</b> Bring deine 4 Figuren einmal herum bis in deinen farbigen Endpunkt.
+    Wer zuerst alle im Endpunkt hat, gewinnt.</p>
+    <p style="color:#5b6080"><i>Gespielt wird auf dem fotografierten Originalbrett; die
+    Felder, Start­felder und Endpunkte wurden aus dem Foto eingemessen. Das gelbe Fach
+    in der Mitte ist nur die Schachtel-Ablage (Würfel + Spielfiguren) und kein Spielfeld.
+    Quelle: Originalanleitung VEB Plasticart Annaberg-Buchholz, Ag 742-19-83. Diese
+    Fassung folgt der erweiterten Regel (4 Figuren je Farbe, Experten-Schlagen).</i></p>
+  </details>
+</div>
+
+<div id="over"><div class="card"><h2 id="overTitle">🏆</h2>
+  <div id="overText"></div>
+  <button id="overBtn">Nochmal spielen</button></div></div>
+
+<script>
+(function(){
+  "use strict";
+
+  const SYM      = {flower:"🌸",ball:"⚽",snail:"🐌",star:"⭐",butterfly:"🦋",mushroom:"🍄"};
+  const SYM_NAME = {flower:"Blume",ball:"Ball",snail:"Schnecke",star:"Stern",
+                    butterfly:"Schmetterling",mushroom:"Pilz"};
+  const DICE     = ["flower","ball","snail","star","butterfly","mushroom"];
+
+  const COLORS = ["red","blue","green","yellow"];
+  const NAMES  = {red:"Rot",blue:"Blau",green:"Grün",yellow:"Gelb"};
+  const HEX    = {red:"#e53935",blue:"#1e88e5",green:"#43a047",yellow:"#fdd835"};
+
+  // ---- Calibrated board (normalized 0..1 over board.jpg, 1000x622) ----
+  const RING_RAW=[
+   {x:0.1295,y:0.4186,sym:"flower"},{x:0.1332,y:0.3459,sym:"ball"},
+   {x:0.1332,y:0.2752,sym:"butterfly"},{x:0.1477,y:0.2083,sym:"mushroom"},
+   {x:0.1659,y:0.1444,sym:"snail"},{x:0.207,y:0.1095,sym:"star"},
+   {x:0.2506,y:0.1163,sym:"flower"},{x:0.2942,y:0.1037,sym:"ball"},
+   {x:0.3305,y:0.1066,sym:"butterfly"},{x:0.3814,y:0.1056,sym:"mushroom"},
+   {x:0.4213,y:0.1037,sym:"snail"},{x:0.4673,y:0.0998,sym:"star"},
+   {x:0.5097,y:0.1066,sym:"flower"},{x:0.5605,y:0.0979,sym:"mushroom"},
+   {x:0.5981,y:0.1017,sym:"ball"},{x:0.6404,y:0.1046,sym:"butterfly"},
+   {x:0.684,y:0.1017,sym:"star"},{x:0.7324,y:0.1037,sym:"snail"},
+   {x:0.77,y:0.1027,sym:"flower"},{x:0.8136,y:0.1424,sym:"mushroom"},
+   {x:0.8426,y:0.1967,sym:"ball"},{x:0.8535,y:0.2635,sym:"flower"},
+   {x:0.8535,y:0.3372,sym:"butterfly"},{x:0.8523,y:0.4021,sym:"star"},
+   {x:0.8608,y:0.4845,sym:"flower"},{x:0.8584,y:0.5474,sym:"snail"},
+   {x:0.8656,y:0.6153,sym:"mushroom"},{x:0.8535,y:0.7034,sym:"butterfly"},
+   {x:0.8438,y:0.778,sym:"star"},{x:0.8087,y:0.8071,sym:"ball"},
+   {x:0.7676,y:0.8197,sym:"flower"},{x:0.7107,y:0.8149,sym:"mushroom"},
+   {x:0.6622,y:0.8245,sym:"star"},{x:0.6102,y:0.8226,sym:"snail"},
+   {x:0.569,y:0.8245,sym:"ball"},{x:0.5315,y:0.8216,sym:"butterfly"},
+   {x:0.4588,y:0.8313,sym:"flower"},{x:0.4189,y:0.8245,sym:"mushroom"},
+   {x:0.368,y:0.8207,sym:"snail"},{x:0.3172,y:0.8168,sym:"star"},
+   {x:0.2809,y:0.8061,sym:"butterfly"},{x:0.2312,y:0.8187,sym:"ball"},
+   {x:0.1852,y:0.8081,sym:"flower"},{x:0.1416,y:0.7722,sym:"snail"},
+   {x:0.1174,y:0.7005,sym:"mushroom"},{x:0.1102,y:0.6172,sym:"star"},
+   {x:0.1235,y:0.5523,sym:"butterfly"},{x:0.1211,y:0.4854,sym:"ball"}
+  ];
+  const ring    = RING_RAW.map(p=>({x:p.x,y:p.y}));
+  const ringSym = RING_RAW.map(p=>p.sym);
+  const RN      = ring.length;            // 48
+  const START   = {red:36, blue:12, green:0, yellow:24};
+  const END     = {red:{x:0.4709,y:0.6124}, blue:{x:0.5121,y:0.2887},
+                   green:{x:0.2676,y:0.4108}, yellow:{x:0.7167,y:0.4767}};
+  const ARM     = {
+    red:   [{x:0.5169,y:0.6124},{x:0.5169,y:0.6802},{x:0.5169,y:0.7422}],
+    blue:  [{x:0.4649,y:0.2887},{x:0.4661,y:0.2093},{x:0.4697,y:0.1686}],
+    green: [{x:0.2639,y:0.4825},{x:0.2191,y:0.4825},{x:0.178,y:0.4786}],
+    yellow:[{x:0.7179,y:0.405},{x:0.7579,y:0.4089},{x:0.8111,y:0.405}]
+  };
+  const LOOP = RN;
+
+  // ---------- State ----------
+  let players=[], pieces=[], turn=0, busy=false, gameOver=false;
+  let awaiting=null, lastRoll=null, flowerStreak=0;
+
+  const layerEl=document.getElementById("layer");
+  const guidesEl=document.getElementById("guides");
+  const vorratRowsEl=document.getElementById("vorratRows");
+  const dieEl=document.getElementById("die");
+  const dieValEl=document.getElementById("dieVal");
+  const rollBtn=document.getElementById("rollBtn");
+  const hintEl=document.getElementById("hint");
+  const turnLbl=document.getElementById("turnLbl");
+  const logEl=document.getElementById("log");
+
+  function drawGuides(){
+    let s="";
+    for(const col of COLORS){
+      const e=END[col], a=ARM[col]||[];
+      const pts=[ {x:e.x,y:e.y} ].concat(a).map(p=>(p.x*1000)+","+(p.y*622)).join(" ");
+      s+='<polyline points="'+pts+'" fill="none" stroke="'+HEX[col]+
+         '" stroke-opacity="0.5" stroke-width="5" stroke-linecap="round" stroke-dasharray="2 7"/>';
+    }
+    guidesEl.innerHTML=s;
+  }
+
+  function coordOf(p){
+    if(p.state==="done") return END[p.color];
+    return ring[p.pos];
+  }
+
+  function renderVorrat(){
+    vorratRowsEl.innerHTML=players.map(pl=>{
+      const cnt=pieces.filter(p=>p.color===pl.color && p.state==="base").length;
+      const toks=Array.from({length:cnt})
+        .map(()=>'<i class="vtoken '+pl.color+'"></i>').join("");
+      return '<div class="vrow"><span class="dot" style="background:'+HEX[pl.color]+
+        '"></span><span class="vname">'+NAMES[pl.color]+(pl.bot?" (Bot)":"")+
+        '</span><span class="vtokens">'+
+        (toks||'<span class="vempty">alle im Spiel ✓</span>')+'</span></div>';
+    }).join("");
+  }
+
+  function render(){
+    layerEl.innerHTML="";
+    // endpoint markers (drawn on the photo, since they sit under the box tray)
+    for(const pl of players){
+      const e=END[pl.color], m=document.createElement("div");
+      m.className="epm "+pl.color;
+      m.style.left=(e.x*100)+"%"; m.style.top=(e.y*100)+"%";
+      m.textContent="🏁";
+      layerEl.appendChild(m);
+    }
+    // pieces (track + done); base pieces live in the Vorrat
+    const byKey={};
+    pieces.forEach(p=>{ if(p.state==="base") return;
+      const c=coordOf(p); const k=c.x+","+c.y;
+      (byKey[k]=byKey[k]||[]).push(p); });
+    for(const k in byKey){
+      const list=byKey[k];
+      list.forEach((p,i)=>{
+        const c=coordOf(p);
+        const n=list.length, off=n>1?(i-(n-1)/2):0;
+        const el=document.createElement("div");
+        el.className="piece "+p.color;
+        el.style.left="calc("+(c.x*100)+"% + "+(off*9)+"px)";
+        el.style.top ="calc("+(c.y*100)+"% + "+(off*9)+"px)";
+        if(awaiting && awaiting.some(m=>m.piece===p)){
+          el.classList.add("sel"); el.onclick=()=>chooseMove(p);
+        }
+        layerEl.appendChild(el);
+      });
+    }
+    renderVorrat();
+  }
+
+  function log(msg,color){
+    const d=document.createElement("div");
+    d.innerHTML=(color?'<span class="dot" style="background:'+HEX[color]+'"></span>':'')+msg;
+    logEl.prepend(d);
+  }
+
+  // ---------- Setup ----------
+  let botCount=1;
+  document.querySelectorAll("#botOpts .opt").forEach(b=>{
+    b.onclick=()=>{
+      document.querySelectorAll("#botOpts .opt").forEach(x=>x.classList.remove("sel"));
+      b.classList.add("sel"); botCount=+b.dataset.bots;
+    };
+  });
+  document.getElementById("startBtn").onclick=startGame;
+  document.getElementById("restart").onclick=()=>location.reload();
+  document.getElementById("overBtn").onclick=()=>location.reload();
+
+  const SEAT=["red","blue","yellow","green"];
+
+  function startGame(){
+    const total=1+botCount;
+    players=[]; pieces=[];
+    for(let i=0;i<total;i++){
+      const col=SEAT[i];
+      players.push({color:col,bot:i!==0});
+      for(let k=0;k<4;k++) pieces.push({color:col,i:k,state:"base",pos:0,progress:0});
+    }
+    turn=0; busy=false; gameOver=false; awaiting=null; flowerStreak=0;
+    document.getElementById("setup").style.display="none";
+    document.getElementById("game").style.display="block";
+    drawGuides(); render();
+    log("Spiel gestartet – "+total+" Spieler. 🌸 = Figur einsetzen.");
+    startTurn();
+  }
+
+  const curPlayer=()=>players[turn];
+
+  function startTurn(){
+    if(gameOver) return;
+    const pl=curPlayer();
+    turnLbl.innerHTML='<span class="dot" style="background:'+HEX[pl.color]+
+      '"></span> '+NAMES[pl.color]+(pl.bot?" (Bot)":" – du bist dran!");
+    awaiting=null; render();
+    if(pl.bot){ rollBtn.disabled=true; hintEl.textContent="Bot überlegt …";
+      setTimeout(doRoll,800);
+    }else{ rollBtn.disabled=false; hintEl.textContent="Drücke „Würfeln“."; }
+  }
+
+  rollBtn.onclick=()=>{ if(!busy && !curPlayer().bot) doRoll(); };
+
+  function doRoll(){
+    if(busy) return; busy=true; awaiting=null; rollBtn.disabled=true;
+    dieEl.classList.add("rolling");
+    let t=0;
+    const iv=setInterval(()=>{
+      dieEl.textContent=SYM[DICE[(Math.random()*6)|0]];
+      if(++t>8){
+        clearInterval(iv);
+        const sym=DICE[(Math.random()*6)|0];
+        lastRoll=sym;
+        dieEl.classList.remove("rolling");
+        dieEl.textContent=SYM[sym];
+        dieValEl.textContent=SYM[sym]+" "+SYM_NAME[sym];
+        resolveRoll(sym);
+      }
+    },55);
+  }
+
+  function stepsTo(from,sym){
+    for(let k=1;k<=RN;k++) if(ringSym[(from+k)%RN]===sym) return k;
+    return RN;
+  }
+
+  // one chip per cell: is ring index idx already held by an own track piece?
+  function occupiedByOwn(idx,color){
+    return pieces.some(p=>p.color===color && p.state==="track" && p.pos===idx);
+  }
+
+  function legalMoves(color,sym){
+    const own=pieces.filter(p=>p.color===color);
+    const mv=[];
+    if(sym==="flower"){
+      const base=own.filter(p=>p.state==="base");
+      // enter on flower – unless your own start cell is already taken by your chip
+      if(base.length && !occupiedByOwn(START[color],color)){
+        mv.push({piece:base[0],type:"enter"}); return mv;
+      }
+      // else flower acts as a normal field symbol (move another chip instead)
+    }
+    own.filter(p=>p.state==="track").forEach(p=>{
+      const k=stepsTo(p.pos,sym);
+      const np=p.progress+k;
+      if(np>=LOOP){ mv.push({piece:p,type:"move",finishes:true,steps:k}); }
+      else {
+        const toIdx=(p.pos+k)%RN;
+        // can't land on a cell already occupied by one of your own chips
+        if(!occupiedByOwn(toIdx,color))
+          mv.push({piece:p,type:"move",finishes:false,steps:k,toIdx});
+      }
+    });
+    return mv;
+  }
+
+  function resolveRoll(sym){
+    const pl=curPlayer();
+    const moves=legalMoves(pl.color,sym);
+    if(moves.length===0){
+      log(NAMES[pl.color]+" würfelt "+SYM[sym]+" "+SYM_NAME[sym]+
+          " – kein Zug (🌸 nötig zum Einsetzen).",pl.color);
+      busy=false; endTurn(false); return;
+    }
+    if(pl.bot){ applyMove(pickBotMove(moves),sym); return; }
+    if(moves.length===1){ applyMove(moves[0],sym); return; }
+    awaiting=moves; busy=false;
+    hintEl.textContent="Wähle eine leuchtende Figur ("+SYM[sym]+" "+SYM_NAME[sym]+").";
+    render();
+  }
+
+  function chooseMove(piece){
+    if(!awaiting) return;
+    const m=awaiting.find(x=>x.piece===piece);
+    if(!m) return;
+    awaiting=null; busy=true; applyMove(m,lastRoll);
+  }
+
+  function captureAt(idx,color){
+    pieces.forEach(o=>{
+      if(o.color!==color && o.state==="track" && o.pos===idx){
+        o.state="base"; o.progress=0; o.pos=0;
+        log(NAMES[color]+" schlägt "+NAMES[o.color]+"! 💥",color);
+      }
+    });
+  }
+
+  function applyMove(m,sym){
+    const p=m.piece, col=p.color;
+    let extra=false;
+    if(m.type==="enter"){
+      p.state="track"; p.pos=START[col]; p.progress=0;
+      captureAt(p.pos,col);
+      log(NAMES[col]+" setzt eine Figur ein. 🌸 (nochmal würfeln)",col);
+      extra=true;
+    }else if(m.finishes){
+      p.state="done";
+      log(NAMES[col]+" bringt eine Figur in den Endpunkt! 🏁",col);
+    }else{
+      p.pos=m.toIdx; p.progress+=m.steps;
+      captureAt(p.pos,col);
+      log(NAMES[col]+" zieht zum nächsten "+SYM[sym]+" "+SYM_NAME[sym]+".",col);
+    }
+    render();
+
+    if(pieces.filter(x=>x.color===col).every(x=>x.state==="done")){
+      gameOver=true; render();
+      const human=!curPlayer().bot;
+      document.getElementById("overTitle").textContent=human?"🏆 Du gewinnst!":"Spiel vorbei";
+      document.getElementById("overText").innerHTML=
+        '<span class="dot" style="background:'+HEX[col]+'"></span> <b>'+
+        NAMES[col]+'</b> hat alle 4 Figuren im Endpunkt!';
+      document.getElementById("over").style.display="flex";
+      return;
+    }
+    setTimeout(()=>{ busy=false; endTurn(extra); },430);
+  }
+
+  function endTurn(extra){
+    if(gameOver) return;
+    if(extra){
+      flowerStreak++;
+      if(flowerStreak>=4){
+        log(NAMES[curPlayer().color]+" – genug 🌸, weiter geht's.",curPlayer().color);
+        flowerStreak=0; turn=(turn+1)%players.length;
+      }
+    }else{ flowerStreak=0; turn=(turn+1)%players.length; }
+    startTurn();
+  }
+
+  function pickBotMove(moves){
+    let best=moves[0],bs=-1;
+    moves.forEach(m=>{
+      let s=1;
+      if(m.type==="enter") s=4;
+      if(m.type==="move"&&m.finishes) s=10;
+      if(m.type==="move"&&!m.finishes){
+        const cap=pieces.some(o=>o.color!==m.piece.color&&o.state==="track"&&o.pos===m.toIdx);
+        if(cap) s=8;
+        s+=Math.min(m.piece.progress,LOOP)/LOOP;
+      }
+      if(s>bs){bs=s;best=m;}
+    });
+    return best;
+  }
+
+})();
+</script>
+</body>
+</html>
