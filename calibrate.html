@@ -66,6 +66,7 @@ Fortschritt wird automatisch lokal gespeichert.</div>
       <button data-ph="start">② Start-Felder</button>
       <button data-ph="end">③ Endpunkte</button>
       <button data-ph="arm">④ Arme (optional)</button>
+      <button data-ph="house">⑤ Häuser (Korridor)</button>
     </div>
 
     <div id="ringTools">
@@ -115,9 +116,18 @@ Fortschritt wird automatisch lokal gespeichert.</div>
   const SYMMAP=Object.fromEntries(SYMS.map(s=>[s[0],s]));
   const COLORS=[["red","#e53935","Rot"],["blue","#1e88e5","Blau"],
                 ["green","#43a047","Grün"],["yellow","#f9a825","Gelb"]];
+  // house corridor symbols per colour, entrance -> furthest (from the user)
+  const HOUSE_SYMS={
+    red:   ["star","snail","flower","ball"],
+    yellow:["mushroom","ball","flower","butterfly"],
+    green: ["mushroom","star","snail","flower"],
+    blue:  ["ball","flower","butterfly","mushroom"]
+  };
   const KEY="dbw_mask_v1";
 
-  let data={ image:"board.jpg", ring:[], starts:{}, endpoints:{}, arms:{red:[],blue:[],green:[],yellow:[]} };
+  const blankHouses=()=>({red:[],blue:[],green:[],yellow:[]});
+  let data={ image:"board.jpg", ring:[], starts:{}, endpoints:{},
+             arms:{red:[],blue:[],green:[],yellow:[]}, houses:blankHouses() };
   let phase="ring", curSym="flower", curColor="red";
 
   const stage=document.getElementById("stage");
@@ -154,6 +164,12 @@ Fortschritt wird automatisch lokal gespeichert.</div>
       "</b>-Endpunkt liegen soll (unter dem Fach – frei platzieren).";
     else if(phase==="arm") h.innerHTML="Optional: Klicke die <b>"+nameOf(curColor)+
       "</b>-Arm-Felder vom Ring nach innen bis zum Endpunkt (in Reihenfolge).";
+    else if(phase==="house"){
+      const seq=(HOUSE_SYMS[curColor]||[]).map(s=>SYMMAP[s][1]).join(" → ");
+      h.innerHTML="Klicke die <b>4 Korridor-Felder</b> von <b>"+nameOf(curColor)+
+        "</b> – vom <b>Eingang</b> (nächstes am Ring) bis zum <b>hintersten</b>. "+
+        "Symbole automatisch: "+seq;
+    }
   }
   function nameOf(c){ return (COLORS.find(x=>x[0]===c)||[])[2]||c; }
 
@@ -189,6 +205,11 @@ Fortschritt wird automatisch lokal gespeichert.</div>
     }
     else if(phase==="end"){ data.endpoints[curColor]={x:p.x,y:p.y}; }
     else if(phase==="arm"){ (data.arms[curColor]=data.arms[curColor]||[]).push({x:p.x,y:p.y}); }
+    else if(phase==="house"){
+      const h=(data.houses[curColor]=data.houses[curColor]||[]);
+      if(h.length>=4){ alert(nameOf(curColor)+": schon 4 Korridor-Felder. „↶“ zum Korrigieren."); return; }
+      h.push({x:p.x,y:p.y,sym:HOUSE_SYMS[curColor][h.length]});
+    }
     save(); draw();
   });
 
@@ -197,6 +218,7 @@ Fortschritt wird automatisch lokal gespeichert.</div>
     else if(phase==="start") delete data.starts[curColor];
     else if(phase==="end") delete data.endpoints[curColor];
     else if(phase==="arm") (data.arms[curColor]||[]).pop();
+    else if(phase==="house") (data.houses[curColor]||[]).pop();
     save(); draw();
   };
   document.getElementById("clearPhase").onclick=()=>{
@@ -204,11 +226,13 @@ Fortschritt wird automatisch lokal gespeichert.</div>
     else if(phase==="start") data.starts={};
     else if(phase==="end") data.endpoints={};
     else if(phase==="arm") data.arms={red:[],blue:[],green:[],yellow:[]};
+    else if(phase==="house") data.houses=blankHouses();
     save(); draw();
   };
   document.getElementById("resetAll").onclick=()=>{
     if(!confirm("Wirklich ALLES zurücksetzen?")) return;
-    data={ image:"board.jpg", ring:[], starts:{}, endpoints:{}, arms:{red:[],blue:[],green:[],yellow:[]} };
+    data={ image:"board.jpg", ring:[], starts:{}, endpoints:{},
+           arms:{red:[],blue:[],green:[],yellow:[]}, houses:blankHouses() };
     save(); draw();
   };
 
@@ -251,6 +275,22 @@ Fortschritt wird automatisch lokal gespeichert.</div>
       d.innerHTML='<div class="pt" style="width:13px;height:13px;background:'+colHex(c)+'"></div>';
       ov.appendChild(d);
     });}
+    // house corridors
+    for(const c in (data.houses||{})){
+      const arr=data.houses[c]||[];
+      for(let i=1;i<arr.length;i++){
+        const a=arr[i-1],b=arr[i];
+        seg.innerHTML+=`<line x1="${a.x*100}%" y1="${a.y*100}%" x2="${b.x*100}%" y2="${b.y*100}%" stroke="${colHex(c)}" stroke-opacity="0.8"/>`;
+      }
+      arr.forEach((s,i)=>{
+        const sm=SYMMAP[s.sym]||["?","?","#888"];
+        const d=document.createElement("div");
+        d.className="mk"; d.style.left=s.x*100+"%"; d.style.top=s.y*100+"%";
+        d.innerHTML='<div class="lbl">'+nameOf(c)+' '+(i+1)+' '+sm[1]+'</div>'+
+          '<div class="pt" style="background:'+sm[2]+';box-shadow:0 0 0 3px '+colHex(c)+'">'+(i+1)+'</div>';
+        ov.appendChild(d);
+      });
+    }
     renderStatus();
   }
 
@@ -258,19 +298,28 @@ Fortschritt wird automatisch lokal gespeichert.</div>
     const need=COLORS.map(c=>c[0]);
     const miss=[];
     need.forEach(c=>{ if(data.starts[c]==null) miss.push(nameOf(c)+"-Start");
-                      if(!data.endpoints[c]) miss.push(nameOf(c)+"-Endpunkt"); });
+                      if(!data.endpoints[c]) miss.push(nameOf(c)+"-Endpunkt");
+                      if(((data.houses||{})[c]||[]).length<4) miss.push(nameOf(c)+"-Haus"); });
+    const hc=COLORS.map(c=>nameOf(c[0])+":"+((data.houses||{})[c[0]]||[]).length).join(" ");
     statusEl.innerHTML=
       "Phase: <b>"+phase+"</b><br>"+
       "Ringfelder: <b>"+data.ring.length+"</b><br>"+
-      "Starts gesetzt: <b>"+Object.keys(data.starts).length+"/4</b> · "+
+      "Starts: <b>"+Object.keys(data.starts).length+"/4</b> · "+
       "Endpunkte: <b>"+Object.keys(data.endpoints).length+"/4</b><br>"+
+      "Häuser-Felder: <b>"+hc+"</b> (je 4)<br>"+
       (miss.length? '<span style="color:#e53935">Fehlt noch: '+miss.join(", ")+'</span>'
                    : '<span style="color:#43a047">✓ vollständig – bereit zum Export</span>');
   }
 
   // persistence
+  function normalize(){
+    data.image=data.image||"board.jpg";
+    data.ring=data.ring||[]; data.starts=data.starts||{}; data.endpoints=data.endpoints||{};
+    data.arms=data.arms||{red:[],blue:[],green:[],yellow:[]};
+    data.houses=data.houses||blankHouses();
+  }
   function save(){ try{ localStorage.setItem(KEY, JSON.stringify(data)); }catch(e){} }
-  function load(){ try{ const s=localStorage.getItem(KEY); if(s) data=JSON.parse(s); }catch(e){} }
+  function load(){ try{ const s=localStorage.getItem(KEY); if(s) data=JSON.parse(s); }catch(e){} normalize(); }
 
   // export / import
   document.getElementById("gen").onclick=()=>{
@@ -287,9 +336,8 @@ Fortschritt wird automatisch lokal gespeichert.</div>
   };
   document.getElementById("load").onclick=()=>{
     try{
-      const d=JSON.parse(document.getElementById("inp").value);
-      data=Object.assign({ image:"board.jpg", ring:[], starts:{}, endpoints:{}, arms:{red:[],blue:[],green:[],yellow:[]} }, d);
-      save(); draw();
+      data=JSON.parse(document.getElementById("inp").value);
+      normalize(); save(); draw();
     }catch(e){ alert("Ungültiges JSON: "+e.message); }
   };
 
