@@ -50,6 +50,8 @@
     transition:left .26s ease,top .26s ease;z-index:6}
   .piece.red{background:rgba(229,57,53,.85)}    .piece.blue{background:rgba(30,136,229,.85)}
   .piece.green{background:rgba(67,160,71,.85)}  .piece.yellow{background:rgba(253,216,53,.88)}
+  .piece.homing{box-shadow:0 0 0 3px #fff,0 0 0 7px #ffb300;animation:hglow 1.4s infinite}
+  @keyframes hglow{50%{box-shadow:0 0 0 3px #fff,0 0 0 11px #ffd54f}}
   .piece.sel{cursor:pointer;pointer-events:auto;
     box-shadow:0 0 0 3px #fff,0 0 0 6px #ffeb3b;animation:pulse 1s infinite}
   @keyframes pulse{50%{transform:translate(-50%,-50%) scale(1.22)}}
@@ -85,6 +87,10 @@
   .vtoken.red{background:var(--red)}   .vtoken.blue{background:var(--blue)}
   .vtoken.green{background:var(--green)}.vtoken.yellow{background:var(--yellow)}
   .vempty{font-size:12px;color:#5b6080}
+  .vhouse{font-size:15px;margin:-3px 0 9px 20px;letter-spacing:3px;line-height:1}
+  .vhouse .hs{opacity:.3;filter:grayscale(.5)}
+  .vhouse .hs.f{opacity:1;filter:none}
+  .vtag{font-size:11px;color:#43a047;font-weight:bold}
   .small{font-size:12px;color:#5b6080;margin-top:10px;text-align:center}
   .small a{color:var(--blue);cursor:pointer;text-decoration:underline}
   details{margin-top:12px;font-size:13px;background:#fff;border:3px solid var(--board-bg);
@@ -258,13 +264,20 @@
 
   function renderVorrat(){
     vorratRowsEl.innerHTML=players.map(pl=>{
-      const cnt=pieces.filter(p=>p.color===pl.color && p.state==="base").length;
+      const col=pl.color;
+      const cnt=pieces.filter(p=>p.color===col && p.state==="base").length;
       const toks=Array.from({length:cnt})
-        .map(()=>'<i class="vtoken '+pl.color+'"></i>').join("");
-      return '<div class="vrow"><span class="dot" style="background:'+HEX[pl.color]+
-        '"></span><span class="vname">'+NAMES[pl.color]+(pl.bot?" (Bot)":"")+
+        .map(()=>'<i class="vtoken '+col+'"></i>').join("");
+      const house=HOUSE[col].map((s,i)=>{
+        const filled=pieces.some(p=>p.color===col&&p.state==="done"&&p.slot===i);
+        return '<span class="hs'+(filled?' f':'')+'">'+SYM[s.sym]+'</span>';
+      }).join("");
+      const tag=pl.finished?'<span class="vtag"> ▸ Platz '+pl.place+'</span>':'';
+      return '<div class="vrow"><span class="dot" style="background:'+HEX[col]+
+        '"></span><span class="vname">'+NAMES[col]+(pl.bot?" (Bot)":"")+tag+
         '</span><span class="vtokens">'+
-        (toks||'<span class="vempty">alle im Spiel ✓</span>')+'</span></div>';
+        (toks||'<span class="vempty">alle im Spiel ✓</span>')+'</span></div>'+
+        '<div class="vhouse" title="Haus '+NAMES[col]+'">🏠 '+house+'</div>';
     }).join("");
   }
 
@@ -285,6 +298,7 @@
         el.className="piece "+p.color;
         el.style.left="calc("+(c.x*100)+"% + "+(off*9)+"px)";
         el.style.top ="calc("+(c.y*100)+"% + "+(off*9)+"px)";
+        if(p.homing) el.classList.add("homing");   // glowing = waiting at the gate
         if(awaiting && awaiting.some(m=>m.piece===p)){
           el.classList.add("sel"); el.onclick=()=>chooseMove(p);
         }
@@ -340,7 +354,17 @@
     awaiting=null; enterBtn.style.display="none"; render();
     if(pl.bot){ rollBtn.disabled=true; hintEl.textContent="Bot überlegt …";
       setTimeout(doRoll,800);
-    }else{ rollBtn.disabled=false; hintEl.textContent="Drücke „Würfeln“."; }
+    }else{
+      rollBtn.disabled=false;
+      const col=pl.color;
+      const homing=pieces.some(p=>p.color===col&&p.state==="track"&&p.homing);
+      if(homing){
+        const need=HOUSE[col]
+          .filter((s,i)=>!pieces.some(p=>p.color===col&&p.state==="done"&&p.slot===i))
+          .map(s=>SYM[s.sym]).join(" ");
+        hintEl.textContent="🚪 Figur am Tor – würfle fürs Haus: "+need;
+      }else hintEl.textContent="Drücke „Würfeln“.";
+    }
   }
 
   rollBtn.onclick=()=>{ if(!busy && !curPlayer().bot) doRoll(); };
