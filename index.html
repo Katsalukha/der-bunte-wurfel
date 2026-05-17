@@ -44,14 +44,18 @@
   #layer{position:absolute;inset:0;pointer-events:none}
   #guides{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
 
-  .epm{position:absolute;transform:translate(-50%,-50%);
-    width:5%;aspect-ratio:1;border-radius:50%;
-    display:flex;align-items:flex-start;justify-content:flex-end;
-    font-size:min(1.5vw,10px);border:2px solid rgba(255,255,255,.8);
-    box-shadow:0 0 0 2px #0005}
-  .epm span{opacity:.7}
-  .epm.red{background:rgba(229,57,53,.30)}   .epm.blue{background:rgba(30,136,229,.30)}
-  .epm.green{background:rgba(67,160,71,.30)} .epm.yellow{background:rgba(249,168,37,.34)}
+  .hslot{position:absolute;transform:translate(-50%,-50%);
+    width:5%;aspect-ratio:1;border-radius:7px;
+    display:flex;align-items:center;justify-content:center;
+    font-size:min(2.3vw,15px);border:2px solid #fff;box-shadow:0 0 0 2px #0004}
+  .hslot span{opacity:.9}
+  .hslot.red{background:rgba(229,57,53,.34)}   .hslot.blue{background:rgba(30,136,229,.34)}
+  .hslot.green{background:rgba(67,160,71,.34)} .hslot.yellow{background:rgba(249,168,37,.38)}
+  .gate{position:absolute;transform:translate(-50%,-50%);
+    width:5.4%;aspect-ratio:1;border-radius:50%;
+    border:2px dashed rgba(255,255,255,.85);box-shadow:0 0 0 2px #0004}
+  .gate.red{background:rgba(229,57,53,.16)}   .gate.blue{background:rgba(30,136,229,.16)}
+  .gate.green{background:rgba(67,160,71,.16)} .gate.yellow{background:rgba(249,168,37,.18)}
 
   .piece{position:absolute;transform:translate(-50%,-50%);
     width:3.6%;aspect-ratio:1;border-radius:50%;
@@ -121,7 +125,7 @@
   <p><b>Willkommen!</b> Du spielst <b style="color:#e53935">Rot</b>. Würfelst du die
   <b>🌸 Blume</b>, kommt eine Figur ins Spiel. Bei jedem anderen Symbol ziehst du eine
   Figur <b>vorwärts zum nächsten Feld mit genau diesem Symbol</b>.</p>
-  <p>Bring als Erster alle 4 Figuren in deinen farbigen Endpunkt!</p>
+  <p>Bring deine 4 Figuren ins farbige Haus – nicht als Letzter!</p>
   <p>Wie viele Bot-Gegner möchtest du?</p>
   <div class="opts" id="botOpts">
     <button class="opt sel" data-bots="1">1 Bot</button>
@@ -174,8 +178,13 @@
     „Staus“: Der einzige Ausweg ist, genau das Symbol zu würfeln, auf dem eine
     <i>gegnerische</i> Figur steht, und sie zu schlagen. Eigene Figuren musst du
     geschickt verteilen, sonst blockierst du dich selbst – das gehört zum Spaß.</p>
-    <p><b>Ziel:</b> Bring deine 4 Figuren einmal herum bis in deinen farbigen Endpunkt.
-    Wer zuerst alle im Endpunkt hat, gewinnt.</p>
+    <p><b>Haus &amp; Ziel:</b> Nach einer vollen Runde wartet die Figur am
+    <b>Tor</b> deines Hauses (Ringfeld – dort <i>nicht sicher</i>, sie kann
+    geschlagen werden!). Dein Haus ist ein <b>Korridor aus 4 Symbol-Feldern</b>.
+    Um eine Figur hineinzubringen, musst du <b>genau das Symbol</b> eines noch
+    freien Hausfeldes würfeln (jedes der 4 Symbole einmal; 🌸 füllt ein
+    Blumen-Feld). Wer alle 4 Figuren im Haus hat, ist fertig. Es wird
+    weitergespielt, bis nur noch ein Spieler übrig ist – dieser <b>verliert</b>.</p>
     <p style="color:#5b6080"><i>Gespielt wird auf dem fotografierten Originalbrett; die
     Felder, Start­felder und Endpunkte wurden aus dem Foto eingemessen. Das gelbe Fach
     in der Mitte ist nur die Schachtel-Ablage (Würfel + Spielfiguren) und kein Spielfeld.
@@ -232,15 +241,15 @@
   const ringSym = RING_RAW.map(p=>p.sym);
   const RN      = ring.length;            // 48
   const START   = {red:36, blue:12, green:0, yellow:24};
-  const END     = {red:{x:0.4709,y:0.6124}, blue:{x:0.5121,y:0.2887},
-                   green:{x:0.2676,y:0.4108}, yellow:{x:0.7167,y:0.4767}};
-  const ARM     = {
-    red:   [{x:0.5169,y:0.6124},{x:0.5169,y:0.6802},{x:0.5169,y:0.7422}],
-    blue:  [{x:0.4649,y:0.2887},{x:0.4661,y:0.2093},{x:0.4697,y:0.1686}],
-    green: [{x:0.2639,y:0.4825},{x:0.2191,y:0.4825},{x:0.178,y:0.4786}],
-    yellow:[{x:0.7179,y:0.405},{x:0.7579,y:0.4089},{x:0.8111,y:0.405}]
+  // 4-slot house corridor per colour (entrance -> furthest), calibrated
+  const HOUSE = {
+    red:   [{x:0.5156,y:0.7428,sym:"star"},{x:0.5169,y:0.6787,sym:"snail"},{x:0.5156,y:0.6088,sym:"flower"},{x:0.4683,y:0.6049,sym:"ball"}],
+    blue:  [{x:0.4707,y:0.166,sym:"ball"},{x:0.4707,y:0.2262,sym:"flower"},{x:0.4695,y:0.2864,sym:"butterfly"},{x:0.5132,y:0.2864,sym:"mushroom"}],
+    green: [{x:0.1723,y:0.4826,sym:"mushroom"},{x:0.2172,y:0.4845,sym:"star"},{x:0.2633,y:0.4845,sym:"snail"},{x:0.2669,y:0.4166,sym:"flower"}],
+    yellow:[{x:0.8093,y:0.4088,sym:"mushroom"},{x:0.7607,y:0.4088,sym:"ball"},{x:0.7158,y:0.4049,sym:"flower"},{x:0.7195,y:0.4787,sym:"butterfly"}]
   };
-  const LOOP = RN;
+  const GATE = {}; for(const c in START) GATE[c]=(START[c]-1+RN)%RN; // ring cell at the house gate
+  const LOOP = RN-1;   // steps from start around to the gate (47)
 
   // ---------- State ----------
   let players=[], pieces=[], turn=0, busy=false, gameOver=false;
@@ -259,18 +268,18 @@
 
   function drawGuides(){
     let s="";
-    for(const col of COLORS){
-      const e=END[col], a=ARM[col]||[];
-      const pts=[ {x:e.x,y:e.y} ].concat(a).map(p=>(p.x*1000)+","+(p.y*622)).join(" ");
-      s+='<polyline points="'+pts+'" fill="none" stroke="'+HEX[col]+
-         '" stroke-opacity="0.5" stroke-width="5" stroke-linecap="round" stroke-dasharray="2 7"/>';
+    for(const pl of players){
+      const h=HOUSE[pl.color];
+      const pts=h.map(p=>(p.x*1000)+","+(p.y*622)).join(" ");
+      s+='<polyline points="'+pts+'" fill="none" stroke="'+HEX[pl.color]+
+         '" stroke-opacity="0.5" stroke-width="7" stroke-linecap="round"/>';
     }
     guidesEl.innerHTML=s;
   }
 
   function coordOf(p){
-    if(p.state==="done") return END[p.color];
-    return ring[p.pos];
+    if(p.state==="done") return HOUSE[p.color][p.slot];
+    return ring[p.pos];               // 'track' incl. a homing chip parked at the gate
   }
 
   function renderVorrat(){
@@ -287,13 +296,20 @@
 
   function render(){
     layerEl.innerHTML="";
-    // endpoint markers (drawn on the photo, since they sit under the box tray)
+    // gate cells + house slot tiles (translucent, so the photo shows through)
     for(const pl of players){
-      const e=END[pl.color], m=document.createElement("div");
-      m.className="epm "+pl.color;
-      m.style.left=(e.x*100)+"%"; m.style.top=(e.y*100)+"%";
-      m.innerHTML="<span>🏁</span>";
-      layerEl.appendChild(m);
+      const col=pl.color, g=ring[GATE[col]];
+      const gm=document.createElement("div");
+      gm.className="gate "+col;
+      gm.style.left=(g.x*100)+"%"; gm.style.top=(g.y*100)+"%";
+      layerEl.appendChild(gm);
+      HOUSE[col].forEach(sl=>{
+        const t=document.createElement("div");
+        t.className="hslot "+col;
+        t.style.left=(sl.x*100)+"%"; t.style.top=(sl.y*100)+"%";
+        t.innerHTML="<span>"+SYM[sl.sym]+"</span>";
+        layerEl.appendChild(t);
+      });
     }
     // pieces (track + done); base pieces live in the Vorrat
     const byKey={};
@@ -343,8 +359,8 @@
     players=[]; pieces=[];
     for(let i=0;i<total;i++){
       const col=SEAT[i];
-      players.push({color:col,bot:i!==0});
-      for(let k=0;k<4;k++) pieces.push({color:col,i:k,state:"base",pos:0,progress:0});
+      players.push({color:col,bot:i!==0,finished:false,place:0});
+      for(let k=0;k<4;k++) pieces.push({color:col,i:k,state:"base",pos:0,progress:0,homing:false,slot:-1});
     }
     turn=0; busy=false; gameOver=false; awaiting=null;
     document.getElementById("setup").style.display="none";
@@ -408,28 +424,41 @@
     return false;
   }
 
+  // index of the house slot with this symbol, if that slot is still free
+  function freeSlot(color,sym){
+    const i=HOUSE[color].findIndex(s=>s.sym===sym);
+    if(i<0) return -1;
+    if(pieces.some(p=>p.color===color && p.state==="done" && p.slot===i)) return -1;
+    return i;
+  }
+
   function legalMoves(color,sym){
     const own=pieces.filter(p=>p.color===color);
     const mv=[];
     if(sym==="flower"){
       const base=own.filter(p=>p.state==="base");
       // 🌸 lets you bring a new chip in (unless your start cell is blocked by
-      // your own chip) – AND/OR move an existing chip to the next 🌸 cell
-      // (the move options are added by the loop below) → the player chooses
+      // your own chip) – the player also gets the move/house options below
       if(base.length && !occupiedByOwn(START[color],color))
         mv.push({piece:base[0],type:"enter"});
     }
     own.filter(p=>p.state==="track").forEach(p=>{
+      if(p.homing){
+        // waiting at the gate: only the rolled slot symbol lets it into the house
+        const sl=freeSlot(color,sym);
+        if(sl>=0) mv.push({piece:p,type:"house",slot:sl});
+        return;
+      }
       const k=stepsTo(p.pos,sym);
-      // can't jump over any chip (own or foreign)
-      if(pathBlocked(p.pos,k)) return;
+      if(pathBlocked(p.pos,k)) return;            // can't jump over any chip
       const np=p.progress+k;
-      if(np>=LOOP){ mv.push({piece:p,type:"move",finishes:true,steps:k}); }
-      else {
+      if(np>=LOOP){
+        // completed the lap → arrive at the (capturable) gate cell
+        if(!occupiedByOwn(GATE[color],color)) mv.push({piece:p,type:"gate"});
+      } else {
         const toIdx=(p.pos+k)%RN;
-        // can't land on a cell already occupied by one of your own chips
         if(!occupiedByOwn(toIdx,color))
-          mv.push({piece:p,type:"move",finishes:false,steps:k,toIdx});
+          mv.push({piece:p,type:"move",steps:k,toIdx});
       }
     });
     return mv;
@@ -468,8 +497,10 @@
   function captureAt(idx,color){
     pieces.forEach(o=>{
       if(o.color!==color && o.state==="track" && o.pos===idx){
-        o.state="base"; o.progress=0; o.pos=0;
-        log(NAMES[color]+" schlägt "+NAMES[o.color]+"! 💥",color);
+        const wasHoming=o.homing;
+        o.state="base"; o.progress=0; o.pos=0; o.homing=false;
+        log(NAMES[color]+" schlägt "+NAMES[o.color]+
+            (wasHoming?" am Tor":"")+"! 💥",color);
       }
     });
   }
@@ -478,12 +509,17 @@
     const p=m.piece, col=p.color;
     const extra=(sym==="flower");   // 🌸 always grants another roll (chained)
     if(m.type==="enter"){
-      p.state="track"; p.pos=START[col]; p.progress=0;
+      p.state="track"; p.pos=START[col]; p.progress=0; p.homing=false;
       captureAt(p.pos,col);
       log(NAMES[col]+" setzt eine neue Figur ein. 🌸 (nochmal würfeln)",col);
-    }else if(m.finishes){
-      p.state="done";
-      log(NAMES[col]+" bringt eine Figur in den Endpunkt! 🏁",col);
+    }else if(m.type==="gate"){
+      p.pos=GATE[col]; p.progress=LOOP; p.homing=true;
+      captureAt(p.pos,col);
+      log(NAMES[col]+" erreicht das Tor zum Haus 🚪 – wartet aufs Symbol.",col);
+    }else if(m.type==="house"){
+      p.state="done"; p.slot=m.slot; p.homing=false;
+      log(NAMES[col]+" bringt eine Figur ins Haus: "+
+          SYM[HOUSE[col][m.slot].sym]+" 🏠",col);
     }else{
       p.pos=m.toIdx; p.progress+=m.steps;
       captureAt(p.pos,col);
@@ -491,22 +527,49 @@
     }
     render();
 
-    if(pieces.filter(x=>x.color===col).every(x=>x.state==="done")){
-      gameOver=true; render();
-      const human=!curPlayer().bot;
-      document.getElementById("overTitle").textContent=human?"🏆 Du gewinnst!":"Spiel vorbei";
+    const me=players.find(x=>x.color===col);
+    if(me && !me.finished && pieces.filter(x=>x.color===col).every(x=>x.state==="done")){
+      me.finished=true;
+      me.place=players.filter(x=>x.finished).length;
+      log(NAMES[col]+" ist fertig – Platz "+me.place+"! 🎉",col);
+    }
+    const unfinished=players.filter(x=>!x.finished);
+    if(unfinished.length<=1){
+      gameOver=true;
+      if(unfinished[0]) unfinished[0].place=players.length;  // last = loser
+      render();
+      const human=players.find(x=>!x.bot);
+      const order=players.slice().sort((a,b)=>(a.place||99)-(b.place||99));
+      let rows=order.map(x=>{
+        const last=!x.finished;
+        return '<div><span class="dot" style="background:'+HEX[x.color]+'"></span> '+
+          NAMES[x.color]+(x.bot?" (Bot)":"")+' – '+
+          (last?'<b>Verlierer</b>':'Platz '+x.place)+'</div>';
+      }).join("");
+      document.getElementById("overTitle").textContent=
+        human.finished ? "🏁 Spiel vorbei" : "😖 Du hast verloren";
       document.getElementById("overText").innerHTML=
-        '<span class="dot" style="background:'+HEX[col]+'"></span> <b>'+
-        NAMES[col]+'</b> hat alle 4 Figuren im Endpunkt!';
+        '<div style="text-align:left;font-size:14px;line-height:1.7">'+rows+'</div>'+
+        '<div style="margin-top:10px">Du: <b>'+
+        (human.finished?("Platz "+human.place):"Verlierer 😖")+'</b></div>';
       document.getElementById("over").style.display="flex";
       return;
     }
     setTimeout(()=>{ busy=false; endTurn(extra); },430);
   }
 
+  function nextActive(t){
+    for(let i=0;i<players.length;i++){
+      const idx=(t+i)%players.length;
+      if(!players[idx].finished) return idx;
+    }
+    return t;
+  }
   function endTurn(extra){
     if(gameOver) return;
-    if(!extra) turn=(turn+1)%players.length;   // 🌸 → same player rolls again
+    const pl=curPlayer();
+    if(extra && pl && !pl.finished){ startTurn(); return; }  // 🌸 → same player again
+    turn=nextActive((turn+1)%players.length);
     startTurn();
   }
 
@@ -514,11 +577,12 @@
     let best=moves[0],bs=-1;
     moves.forEach(m=>{
       let s=1;
-      if(m.type==="enter") s=4;
-      if(m.type==="move"&&m.finishes) s=10;
-      if(m.type==="move"&&!m.finishes){
+      if(m.type==="house") s=20;            // get a chip safely into the house
+      else if(m.type==="gate") s=12;        // reach the house gate
+      else if(m.type==="enter") s=4;
+      else {                                 // move
         const cap=pieces.some(o=>o.color!==m.piece.color&&o.state==="track"&&o.pos===m.toIdx);
-        if(cap) s=8;
+        if(cap) s=8;                         // capture an opponent
         s+=Math.min(m.piece.progress,LOOP)/LOOP;
       }
       if(s>bs){bs=s;best=m;}

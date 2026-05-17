@@ -12,7 +12,7 @@ gegen **1–3 Bots** – die Würfe sind zufällig (für dich und die Bots).
 
 1. Wähle die Anzahl der Bot-Gegner (1–3).
 2. Du spielst **Rot**. Drücke **„Würfeln“**.
-3. Bring als Erster alle 4 Figuren in deinen farbigen Endpunkt.
+3. Bring deine 4 Figuren ins farbige Haus – nicht als Letzter!
 
 ## Originalregeln (VEB Plasticart)
 
@@ -32,9 +32,12 @@ tragen **6 Bilder**: 🌸 Blume · 🍄 Pilz · ⚽ Ball · 🐌 Schnecke · ⭐
   auch eine *eigene* – ist dieser Zug nicht möglich. Aus „Staus“ kommst du nur
   heraus, indem du genau das Symbol würfelst, auf dem eine *gegnerische* Figur
   steht, und sie schlägst. Eigene Figuren clever verteilen!
-- **Ziel:** Figur einmal herum bis in den farbigen Endpunkt der eigenen
-  Farbe (blaue Figur → blauer Endpunkt). Wer zuerst alle 4 Figuren im
-  Endpunkt hat, gewinnt.
+- **Haus & Ziel:** Nach einer vollen Runde wartet die Figur am **Tor** des
+  eigenen Hauses (ein Ringfeld – *nicht sicher*, kann geschlagen werden). Das
+  Haus ist ein **Korridor aus 4 Symbol-Feldern**; um hineinzuziehen, musst du
+  **genau das Symbol** eines freien Hausfeldes würfeln (jedes der 4 Symbole
+  einmal; 🌸 füllt ein Blumen-Feld). Wer alle 4 im Haus hat, ist fertig –
+  gespielt wird, bis nur einer übrig ist: der **Verlierer**.
 
 > **Umsetzung:** Diese Fassung folgt der *erweiterten Spielregel für ältere
 > Kinder* (4 Figuren je Farbe) inkl. der Experten-Schlagen-Regel. Die
