@@ -42,27 +42,14 @@
     box-shadow:0 12px 30px rgba(0,0,0,.25);background:#fff;line-height:0}
   #boardImg{width:100%;height:auto;display:block;border-radius:7px}
   #layer{position:absolute;inset:0;pointer-events:none}
-  #guides{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
 
-  .hslot{position:absolute;transform:translate(-50%,-50%);
-    width:5%;aspect-ratio:1;border-radius:7px;
-    display:flex;align-items:center;justify-content:center;
-    font-size:min(2.3vw,15px);border:2px solid #fff;box-shadow:0 0 0 2px #0004}
-  .hslot span{opacity:.9}
-  .hslot.red{background:rgba(229,57,53,.34)}   .hslot.blue{background:rgba(30,136,229,.34)}
-  .hslot.green{background:rgba(67,160,71,.34)} .hslot.yellow{background:rgba(249,168,37,.38)}
-  .gate{position:absolute;transform:translate(-50%,-50%);
-    width:5.4%;aspect-ratio:1;border-radius:50%;
-    border:2px dashed rgba(255,255,255,.85);box-shadow:0 0 0 2px #0004}
-  .gate.red{background:rgba(229,57,53,.16)}   .gate.blue{background:rgba(30,136,229,.16)}
-  .gate.green{background:rgba(67,160,71,.16)} .gate.yellow{background:rgba(249,168,37,.18)}
 
   .piece{position:absolute;transform:translate(-50%,-50%);
     width:3.6%;aspect-ratio:1;border-radius:50%;
     border:2px solid #fff;box-shadow:0 2px 4px rgba(0,0,0,.55);
     transition:left .26s ease,top .26s ease;z-index:6}
-  .piece.red{background:rgba(229,57,53,.56)}    .piece.blue{background:rgba(30,136,229,.56)}
-  .piece.green{background:rgba(67,160,71,.56)}  .piece.yellow{background:rgba(253,216,53,.62)}
+  .piece.red{background:rgba(229,57,53,.85)}    .piece.blue{background:rgba(30,136,229,.85)}
+  .piece.green{background:rgba(67,160,71,.85)}  .piece.yellow{background:rgba(253,216,53,.88)}
   .piece.sel{cursor:pointer;pointer-events:auto;
     box-shadow:0 0 0 3px #fff,0 0 0 6px #ffeb3b;animation:pulse 1s infinite}
   @keyframes pulse{50%{transform:translate(-50%,-50%) scale(1.22)}}
@@ -144,7 +131,6 @@
     </div>
     <div class="board-shell">
       <img id="boardImg" src="board.jpg" alt="Der bunte Würfel – Originalspielbrett" />
-      <svg id="guides" viewBox="0 0 1000 622" preserveAspectRatio="none"></svg>
       <div id="layer"></div>
     </div>
     <div class="panel">
@@ -256,7 +242,6 @@
   let awaiting=null, lastRoll=null;
 
   const layerEl=document.getElementById("layer");
-  const guidesEl=document.getElementById("guides");
   const vorratRowsEl=document.getElementById("vorratRows");
   const dieEl=document.getElementById("die");
   const dieValEl=document.getElementById("dieVal");
@@ -265,17 +250,6 @@
   const hintEl=document.getElementById("hint");
   const turnLbl=document.getElementById("turnLbl");
   const logEl=document.getElementById("log");
-
-  function drawGuides(){
-    let s="";
-    for(const pl of players){
-      const h=HOUSE[pl.color];
-      const pts=h.map(p=>(p.x*1000)+","+(p.y*622)).join(" ");
-      s+='<polyline points="'+pts+'" fill="none" stroke="'+HEX[pl.color]+
-         '" stroke-opacity="0.5" stroke-width="7" stroke-linecap="round"/>';
-    }
-    guidesEl.innerHTML=s;
-  }
 
   function coordOf(p){
     if(p.state==="done") return HOUSE[p.color][p.slot];
@@ -296,21 +270,7 @@
 
   function render(){
     layerEl.innerHTML="";
-    // gate cells + house slot tiles (translucent, so the photo shows through)
-    for(const pl of players){
-      const col=pl.color, g=ring[GATE[col]];
-      const gm=document.createElement("div");
-      gm.className="gate "+col;
-      gm.style.left=(g.x*100)+"%"; gm.style.top=(g.y*100)+"%";
-      layerEl.appendChild(gm);
-      HOUSE[col].forEach(sl=>{
-        const t=document.createElement("div");
-        t.className="hslot "+col;
-        t.style.left=(sl.x*100)+"%"; t.style.top=(sl.y*100)+"%";
-        t.innerHTML="<span>"+SYM[sl.sym]+"</span>";
-        layerEl.appendChild(t);
-      });
-    }
+    // the board photo already shows the corridors/gates – only chips overlay it
     // pieces (track + done); base pieces live in the Vorrat
     const byKey={};
     pieces.forEach(p=>{ if(p.state==="base") return;
@@ -365,7 +325,7 @@
     turn=0; busy=false; gameOver=false; awaiting=null;
     document.getElementById("setup").style.display="none";
     document.getElementById("game").style.display="block";
-    drawGuides(); render();
+    render();
     log("Spiel gestartet – "+total+" Spieler. 🌸 = Figur einsetzen.");
     startTurn();
   }
