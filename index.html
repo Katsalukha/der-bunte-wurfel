@@ -3,6 +3,9 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+<meta http-equiv="Pragma" content="no-cache" />
+<meta http-equiv="Expires" content="0" />
 <title>Der bunte Würfel</title>
 <meta name="description" content="Der bunte Würfel – das DDR-Brettspiel von VEB Plasticart, digital auf dem Originalbrett. Gegen 1–3 Bots." />
 <style>
@@ -145,7 +148,7 @@
       <button class="roll" id="enterBtn" style="display:none;margin-top:8px;background:var(--green);box-shadow:0 5px 0 #2f7a35">🌸 Neue Figur einsetzen</button>
       <div class="hint" id="hint">Drücke „Würfeln“.</div>
       <div id="log"></div>
-      <div class="small"><a id="restart">↻ Neues Spiel</a></div>
+      <div class="small"><a id="restart">↻ Neues Spiel</a> · <span id="build">Build —</span></div>
     </div>
   </div>
 
@@ -192,6 +195,10 @@
 <script>
 (function(){
   "use strict";
+
+  const BUILD="2026-05-17 · Haus-Korridor";
+  try{ document.getElementById("build").textContent="Build "+BUILD;
+       console.log("Der bunte Würfel – Build "+BUILD); }catch(e){}
 
   const SYM      = {flower:"🌸",ball:"⚽",snail:"🐌",star:"⭐",butterfly:"🦋",mushroom:"🍄"};
   const SYM_NAME = {flower:"Blume",ball:"Ball",snail:"Schnecke",star:"Stern",
