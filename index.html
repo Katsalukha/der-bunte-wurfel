@@ -165,8 +165,11 @@
     <p><b>Nur 1 Figur pro Feld:</b> Steht auf dem Zielfeld bereits eine <i>eigene</i>
     Figur, darf dort keine zweite hin – du musst eine andere Figur ziehen. Steht dort
     eine <i>fremde</i> Figur, wird sie geschlagen und kommt zurück in den Vorrat.</p>
-    <p><b>Nicht überspringen:</b> Liegt auf dem Weg zum Zielfeld eine <i>fremde</i>
-    Figur, kann diese Figur nicht ziehen (kein Überspringen) – ziehe eine andere.</p>
+    <p><b>Kein Überspringen:</b> Liegt auf dem Weg zum Zielfeld <i>irgendeine</i>
+    Figur – auch eine <i>eigene</i> – ist dieser Zug nicht möglich. So entstehen
+    „Staus“: Der einzige Ausweg ist, genau das Symbol zu würfeln, auf dem eine
+    <i>gegnerische</i> Figur steht, und sie zu schlagen. Eigene Figuren musst du
+    geschickt verteilen, sonst blockierst du dich selbst – das gehört zum Spaß.</p>
     <p><b>Ziel:</b> Bring deine 4 Figuren einmal herum bis in deinen farbigen Endpunkt.
     Wer zuerst alle im Endpunkt hat, gewinnt.</p>
     <p style="color:#5b6080"><i>Gespielt wird auf dem fotografierten Originalbrett; die
@@ -388,12 +391,13 @@
   function occupiedByOwn(idx,color){
     return pieces.some(p=>p.color===color && p.state==="track" && p.pos===idx);
   }
-  // you may not jump over another player's chip: any cell strictly between
-  // the start and the destination must be free of opponents
-  function pathBlocked(fromPos,k,color){
+  // you may not jump over ANY chip (own or foreign): every cell strictly
+  // between the start and the destination must be empty. The only way through
+  // a jam is to roll the symbol of an opponent's chip and capture it.
+  function pathBlocked(fromPos,k){
     for(let j=1;j<k;j++){
       const idx=(fromPos+j)%RN;
-      if(pieces.some(o=>o.color!==color && o.state==="track" && o.pos===idx))
+      if(pieces.some(o=>o.state==="track" && o.pos===idx))
         return true;
     }
     return false;
@@ -412,8 +416,8 @@
     }
     own.filter(p=>p.state==="track").forEach(p=>{
       const k=stepsTo(p.pos,sym);
-      // can't jump over another player's chip
-      if(pathBlocked(p.pos,k,color)) return;
+      // can't jump over any chip (own or foreign)
+      if(pathBlocked(p.pos,k)) return;
       const np=p.progress+k;
       if(np>=LOOP){ mv.push({piece:p,type:"move",finishes:true,steps:k}); }
       else {
