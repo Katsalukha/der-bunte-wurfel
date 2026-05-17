@@ -34,10 +34,11 @@ tragen **6 Bilder**: 🌸 Blume · 🍄 Pilz · ⚽ Ball · 🐌 Schnecke · ⭐
   steht, und sie schlägst. Eigene Figuren clever verteilen!
 - **Haus & Ziel:** Nach einer vollen Runde wartet die Figur am **Tor** des
   eigenen Hauses (ein Ringfeld – *nicht sicher*, kann geschlagen werden). Das
-  Haus ist ein **Korridor aus 4 Symbol-Feldern**; um hineinzuziehen, musst du
-  **genau das Symbol** eines freien Hausfeldes würfeln (jedes der 4 Symbole
-  einmal; 🌸 füllt ein Blumen-Feld). Wer alle 4 im Haus hat, ist fertig –
-  gespielt wird, bis nur einer übrig ist: der **Verlierer**.
+  Haus ist ein **Korridor aus 4 Symbol-Feldern**; würfle das Symbol eines
+  Korridor-Feldes, um hineinzuziehen. Figuren im Haus dürfen **weiter nach
+  vorn rücken** (Symbol eines tieferen Feldes) – auch hier gilt **kein
+  Überspringen**, so bleibt der Eingang frei. Wer alle 4 im Haus hat, ist
+  fertig – gespielt wird, bis nur einer übrig ist: der **Verlierer**.
 
 > **Umsetzung:** Diese Fassung folgt der *erweiterten Spielregel für ältere
 > Kinder* (4 Figuren je Farbe) inkl. der Experten-Schlagen-Regel. Die

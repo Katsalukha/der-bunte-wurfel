@@ -50,8 +50,6 @@
     transition:left .26s ease,top .26s ease;z-index:6}
   .piece.red{background:rgba(229,57,53,.85)}    .piece.blue{background:rgba(30,136,229,.85)}
   .piece.green{background:rgba(67,160,71,.85)}  .piece.yellow{background:rgba(253,216,53,.88)}
-  .piece.homing{box-shadow:0 0 0 3px #fff,0 0 0 7px #ffb300;animation:hglow 1.4s infinite}
-  @keyframes hglow{50%{box-shadow:0 0 0 3px #fff,0 0 0 11px #ffd54f}}
   .piece.sel{cursor:pointer;pointer-events:auto;
     box-shadow:0 0 0 3px #fff,0 0 0 6px #ffeb3b;animation:pulse 1s infinite}
   @keyframes pulse{50%{transform:translate(-50%,-50%) scale(1.22)}}
@@ -172,11 +170,13 @@
     geschickt verteilen, sonst blockierst du dich selbst – das gehört zum Spaß.</p>
     <p><b>Haus &amp; Ziel:</b> Nach einer vollen Runde wartet die Figur am
     <b>Tor</b> deines Hauses (Ringfeld – dort <i>nicht sicher</i>, sie kann
-    geschlagen werden!). Dein Haus ist ein <b>Korridor aus 4 Symbol-Feldern</b>.
-    Um eine Figur hineinzubringen, musst du <b>genau das Symbol</b> eines noch
-    freien Hausfeldes würfeln (jedes der 4 Symbole einmal; 🌸 füllt ein
-    Blumen-Feld). Wer alle 4 Figuren im Haus hat, ist fertig. Es wird
-    weitergespielt, bis nur noch ein Spieler übrig ist – dieser <b>verliert</b>.</p>
+    geschlagen werden!). Das Haus ist ein <b>Korridor aus 4 Symbol-Feldern</b>.
+    Würfle das Symbol eines Korridor-Feldes, um hineinzuziehen. Figuren im
+    Haus dürfen <b>weiter nach vorn rücken</b> (Symbol eines tieferen Feldes
+    würfeln) – auch hier gilt: <b>keine Figur überspringen</b>. So hältst du
+    den Eingang frei, damit die nächste Figur leichter hereinkommt. Wer alle 4
+    Figuren im Haus hat, ist fertig; gespielt wird, bis nur einer übrig ist –
+    der <b>verliert</b>.</p>
     <p style="color:#5b6080"><i>Gespielt wird auf dem fotografierten Originalbrett; die
     Felder, Start­felder und Endpunkte wurden aus dem Foto eingemessen. Das gelbe Fach
     in der Mitte ist nur die Schachtel-Ablage (Würfel + Spielfiguren) und kein Spielfeld.
@@ -258,7 +258,7 @@
   const logEl=document.getElementById("log");
 
   function coordOf(p){
-    if(p.state==="done") return HOUSE[p.color][p.slot];
+    if(p.state==="house") return HOUSE[p.color][p.hpos];
     return ring[p.pos];               // 'track' incl. a homing chip parked at the gate
   }
 
@@ -269,7 +269,7 @@
       const toks=Array.from({length:cnt})
         .map(()=>'<i class="vtoken '+col+'"></i>').join("");
       const house=HOUSE[col].map((s,i)=>{
-        const filled=pieces.some(p=>p.color===col&&p.state==="done"&&p.slot===i);
+        const filled=pieces.some(p=>p.color===col&&p.state==="house"&&p.hpos===i);
         return '<span class="hs'+(filled?' f':'')+'">'+SYM[s.sym]+'</span>';
       }).join("");
       const tag=pl.finished?'<span class="vtag"> ▸ Platz '+pl.place+'</span>':'';
@@ -298,7 +298,6 @@
         el.className="piece "+p.color;
         el.style.left="calc("+(c.x*100)+"% + "+(off*9)+"px)";
         el.style.top ="calc("+(c.y*100)+"% + "+(off*9)+"px)";
-        if(p.homing) el.classList.add("homing");   // glowing = waiting at the gate
         if(awaiting && awaiting.some(m=>m.piece===p)){
           el.classList.add("sel"); el.onclick=()=>chooseMove(p);
         }
@@ -334,7 +333,7 @@
     for(let i=0;i<total;i++){
       const col=SEAT[i];
       players.push({color:col,bot:i!==0,finished:false,place:0});
-      for(let k=0;k<4;k++) pieces.push({color:col,i:k,state:"base",pos:0,progress:0,homing:false,slot:-1});
+      for(let k=0;k<4;k++) pieces.push({color:col,i:k,state:"base",pos:0,progress:0,homing:false,hpos:-1});
     }
     turn=0; busy=false; gameOver=false; awaiting=null;
     document.getElementById("setup").style.display="none";
@@ -360,7 +359,7 @@
       const homing=pieces.some(p=>p.color===col&&p.state==="track"&&p.homing);
       if(homing){
         const need=HOUSE[col]
-          .filter((s,i)=>!pieces.some(p=>p.color===col&&p.state==="done"&&p.slot===i))
+          .filter((s,i)=>!pieces.some(p=>p.color===col&&p.state==="house"&&p.hpos===i))
           .map(s=>SYM[s.sym]).join(" ");
         hintEl.textContent="🚪 Figur am Tor – würfle fürs Haus: "+need;
       }else hintEl.textContent="Drücke „Würfeln“.";
@@ -408,12 +407,16 @@
     return false;
   }
 
-  // index of the house slot with this symbol, if that slot is still free
-  function freeSlot(color,sym){
-    const i=HOUSE[color].findIndex(s=>s.sym===sym);
-    if(i<0) return -1;
-    if(pieces.some(p=>p.color===color && p.state==="done" && p.slot===i)) return -1;
-    return i;
+  // corridor cell index for this symbol (symbols are unique per house)
+  function corridorIdx(color,sym){ return HOUSE[color].findIndex(s=>s.sym===sym); }
+  // is corridor cell h occupied by one of this colour's chips?
+  function houseHas(color,h){
+    return pieces.some(p=>p.color===color && p.state==="house" && p.hpos===h);
+  }
+  // every corridor cell in [a..b] free? (no jumping over chips inside the house)
+  function corridorClear(color,a,b){
+    for(let h=a;h<=b;h++) if(houseHas(color,h)) return false;
+    return true;
   }
 
   function legalMoves(color,sym){
@@ -426,11 +429,21 @@
       if(base.length && !occupiedByOwn(START[color],color))
         mv.push({piece:base[0],type:"enter"});
     }
+    // chips already inside the house may advance further down the corridor
+    // (forward only, can't jump over a chip inside the house) – this frees the
+    // entrance so other chips can get in
+    own.filter(p=>p.state==="house").forEach(p=>{
+      const j=corridorIdx(color,sym);
+      if(j>p.hpos && corridorClear(color,p.hpos+1,j))
+        mv.push({piece:p,type:"houseMove",hpos:j});
+    });
     own.filter(p=>p.state==="track").forEach(p=>{
       if(p.homing){
-        // waiting at the gate: only the rolled slot symbol lets it into the house
-        const sl=freeSlot(color,sym);
-        if(sl>=0) mv.push({piece:p,type:"house",slot:sl});
+        // at the gate: roll a corridor symbol to enter that cell – the path
+        // from the entrance up to it must be clear (no jumping inside the house)
+        const j=corridorIdx(color,sym);
+        if(j>=0 && corridorClear(color,0,j))
+          mv.push({piece:p,type:"enterHouse",hpos:j});
         return;
       }
       const k=stepsTo(p.pos,sym);
@@ -500,10 +513,12 @@
       p.pos=GATE[col]; p.progress=LOOP; p.homing=true;
       captureAt(p.pos,col);
       log(NAMES[col]+" erreicht das Tor zum Haus 🚪 – wartet aufs Symbol.",col);
-    }else if(m.type==="house"){
-      p.state="done"; p.slot=m.slot; p.homing=false;
-      log(NAMES[col]+" bringt eine Figur ins Haus: "+
-          SYM[HOUSE[col][m.slot].sym]+" 🏠",col);
+    }else if(m.type==="enterHouse"){
+      p.state="house"; p.hpos=m.hpos; p.homing=false;
+      log(NAMES[col]+" zieht ins Haus: "+SYM[HOUSE[col][m.hpos].sym]+" 🏠",col);
+    }else if(m.type==="houseMove"){
+      p.hpos=m.hpos;
+      log(NAMES[col]+" rückt im Haus vor: "+SYM[HOUSE[col][m.hpos].sym]+" 🏠",col);
     }else{
       p.pos=m.toIdx; p.progress+=m.steps;
       captureAt(p.pos,col);
@@ -512,7 +527,7 @@
     render();
 
     const me=players.find(x=>x.color===col);
-    if(me && !me.finished && pieces.filter(x=>x.color===col).every(x=>x.state==="done")){
+    if(me && !me.finished && pieces.filter(x=>x.color===col).every(x=>x.state==="house")){
       me.finished=true;
       me.place=players.filter(x=>x.finished).length;
       log(NAMES[col]+" ist fertig – Platz "+me.place+"! 🎉",col);
@@ -561,8 +576,9 @@
     let best=moves[0],bs=-1;
     moves.forEach(m=>{
       let s=1;
-      if(m.type==="house") s=20;            // get a chip safely into the house
-      else if(m.type==="gate") s=12;        // reach the house gate
+      if(m.type==="enterHouse") s=20+m.hpos;        // get safely in, deeper = better
+      else if(m.type==="houseMove") s=14+m.hpos;    // pack deeper, free the entrance
+      else if(m.type==="gate") s=12;                // reach the house gate
       else if(m.type==="enter") s=4;
       else {                                 // move
         const cap=pieces.some(o=>o.color!==m.piece.color&&o.state==="track"&&o.pos===m.toIdx);
