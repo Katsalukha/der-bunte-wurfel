@@ -165,6 +165,8 @@
     <p><b>Nur 1 Figur pro Feld:</b> Steht auf dem Zielfeld bereits eine <i>eigene</i>
     Figur, darf dort keine zweite hin – du musst eine andere Figur ziehen. Steht dort
     eine <i>fremde</i> Figur, wird sie geschlagen und kommt zurück in den Vorrat.</p>
+    <p><b>Nicht überspringen:</b> Liegt auf dem Weg zum Zielfeld eine <i>fremde</i>
+    Figur, kann diese Figur nicht ziehen (kein Überspringen) – ziehe eine andere.</p>
     <p><b>Ziel:</b> Bring deine 4 Figuren einmal herum bis in deinen farbigen Endpunkt.
     Wer zuerst alle im Endpunkt hat, gewinnt.</p>
     <p style="color:#5b6080"><i>Gespielt wird auf dem fotografierten Originalbrett; die
@@ -386,6 +388,16 @@
   function occupiedByOwn(idx,color){
     return pieces.some(p=>p.color===color && p.state==="track" && p.pos===idx);
   }
+  // you may not jump over another player's chip: any cell strictly between
+  // the start and the destination must be free of opponents
+  function pathBlocked(fromPos,k,color){
+    for(let j=1;j<k;j++){
+      const idx=(fromPos+j)%RN;
+      if(pieces.some(o=>o.color!==color && o.state==="track" && o.pos===idx))
+        return true;
+    }
+    return false;
+  }
 
   function legalMoves(color,sym){
     const own=pieces.filter(p=>p.color===color);
@@ -400,6 +412,8 @@
     }
     own.filter(p=>p.state==="track").forEach(p=>{
       const k=stepsTo(p.pos,sym);
+      // can't jump over another player's chip
+      if(pathBlocked(p.pos,k,color)) return;
       const np=p.progress+k;
       if(np>=LOOP){ mv.push({piece:p,type:"move",finishes:true,steps:k}); }
       else {

@@ -27,6 +27,8 @@ tragen **6 Bilder**: 🌸 Blume · 🍄 Pilz · ⚽ Ball · 🐌 Schnecke · ⭐
 - **Nur 1 Figur pro Feld:** Steht auf dem Zielfeld schon eine *eigene* Figur,
   darf dort keine zweite hin – du musst eine andere Figur ziehen. Steht dort
   eine *fremde* Figur, wird sie geschlagen und muss neu eingesetzt werden.
+- **Kein Überspringen:** Liegt auf dem Weg zum Zielfeld eine *fremde* Figur,
+  ist dieser Zug nicht möglich – ziehe eine andere Figur.
 - **Ziel:** Figur einmal herum bis in den farbigen Endpunkt der eigenen
   Farbe (blaue Figur → blauer Endpunkt). Wer zuerst alle 4 Figuren im
   Endpunkt hat, gewinnt.
