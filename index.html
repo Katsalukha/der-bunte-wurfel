@@ -45,19 +45,20 @@
   #guides{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
 
   .epm{position:absolute;transform:translate(-50%,-50%);
-    width:5.4%;aspect-ratio:1;border-radius:50%;
-    display:flex;align-items:center;justify-content:center;
-    font-size:min(2.6vw,17px);border:3px solid #fff;
-    box-shadow:0 0 0 3px #0006,0 2px 5px #0007}
-  .epm.red{background:var(--red)}   .epm.blue{background:var(--blue)}
-  .epm.green{background:var(--green)}.epm.yellow{background:#f9a825}
+    width:5%;aspect-ratio:1;border-radius:50%;
+    display:flex;align-items:flex-start;justify-content:flex-end;
+    font-size:min(1.5vw,10px);border:2px solid rgba(255,255,255,.8);
+    box-shadow:0 0 0 2px #0005}
+  .epm span{opacity:.7}
+  .epm.red{background:rgba(229,57,53,.30)}   .epm.blue{background:rgba(30,136,229,.30)}
+  .epm.green{background:rgba(67,160,71,.30)} .epm.yellow{background:rgba(249,168,37,.34)}
 
   .piece{position:absolute;transform:translate(-50%,-50%);
     width:3.6%;aspect-ratio:1;border-radius:50%;
     border:2px solid #fff;box-shadow:0 2px 4px rgba(0,0,0,.55);
     transition:left .26s ease,top .26s ease;z-index:6}
-  .piece.red{background:var(--red)}   .piece.blue{background:var(--blue)}
-  .piece.green{background:var(--green)}.piece.yellow{background:var(--yellow)}
+  .piece.red{background:rgba(229,57,53,.56)}    .piece.blue{background:rgba(30,136,229,.56)}
+  .piece.green{background:rgba(67,160,71,.56)}  .piece.yellow{background:rgba(253,216,53,.62)}
   .piece.sel{cursor:pointer;pointer-events:auto;
     box-shadow:0 0 0 3px #fff,0 0 0 6px #ffeb3b;animation:pulse 1s infinite}
   @keyframes pulse{50%{transform:translate(-50%,-50%) scale(1.22)}}
@@ -147,6 +148,7 @@
       <div id="die">🎲</div>
       <div class="dieval" id="dieVal">&nbsp;</div>
       <button class="roll" id="rollBtn">Würfeln</button>
+      <button class="roll" id="enterBtn" style="display:none;margin-top:8px;background:var(--green);box-shadow:0 5px 0 #2f7a35">🌸 Neue Figur einsetzen</button>
       <div class="hint" id="hint">Drücke „Würfeln“.</div>
       <div id="log"></div>
       <div class="small"><a id="restart">↻ Neues Spiel</a></div>
@@ -160,8 +162,10 @@
     ⭐ Stern · 🦋 Schmetterling.</p>
     <p><b>Bewegung:</b> Kein Zählen – du würfelst ein Symbol und ziehst deine Figur
     <b>vorwärts bis zum nächsten Feld mit genau diesem Symbol</b> (im Uhrzeigersinn).</p>
-    <p><b>🌸 Blume = Einsetzen:</b> Eine Figur kommt auf dein farbiges Ausgangsfeld –
-    und du darfst gleich noch einmal würfeln. So lange, bis alle Figuren im Spiel sind.</p>
+    <p><b>🌸 Blume:</b> Du <i>wählst</i> – entweder eine neue Figur auf dein
+    Ausgangsfeld einsetzen, <i>oder</i> eine Figur auf dem Brett zum nächsten
+    🌸-Feld ziehen. Danach <b>noch einmal würfeln</b>. Wieder Blume? Es geht
+    weiter – so lange, bis ein anderes Symbol kommt und den Zug beendet.</p>
     <p><b>Nur 1 Figur pro Feld:</b> Steht auf dem Zielfeld bereits eine <i>eigene</i>
     Figur, darf dort keine zweite hin – du musst eine andere Figur ziehen. Steht dort
     eine <i>fremde</i> Figur, wird sie geschlagen und kommt zurück in den Vorrat.</p>
@@ -240,7 +244,7 @@
 
   // ---------- State ----------
   let players=[], pieces=[], turn=0, busy=false, gameOver=false;
-  let awaiting=null, lastRoll=null, flowerStreak=0;
+  let awaiting=null, lastRoll=null;
 
   const layerEl=document.getElementById("layer");
   const guidesEl=document.getElementById("guides");
@@ -248,6 +252,7 @@
   const dieEl=document.getElementById("die");
   const dieValEl=document.getElementById("dieVal");
   const rollBtn=document.getElementById("rollBtn");
+  const enterBtn=document.getElementById("enterBtn");
   const hintEl=document.getElementById("hint");
   const turnLbl=document.getElementById("turnLbl");
   const logEl=document.getElementById("log");
@@ -287,7 +292,7 @@
       const e=END[pl.color], m=document.createElement("div");
       m.className="epm "+pl.color;
       m.style.left=(e.x*100)+"%"; m.style.top=(e.y*100)+"%";
-      m.textContent="🏁";
+      m.innerHTML="<span>🏁</span>";
       layerEl.appendChild(m);
     }
     // pieces (track + done); base pieces live in the Vorrat
@@ -341,7 +346,7 @@
       players.push({color:col,bot:i!==0});
       for(let k=0;k<4;k++) pieces.push({color:col,i:k,state:"base",pos:0,progress:0});
     }
-    turn=0; busy=false; gameOver=false; awaiting=null; flowerStreak=0;
+    turn=0; busy=false; gameOver=false; awaiting=null;
     document.getElementById("setup").style.display="none";
     document.getElementById("game").style.display="block";
     drawGuides(); render();
@@ -356,7 +361,7 @@
     const pl=curPlayer();
     turnLbl.innerHTML='<span class="dot" style="background:'+HEX[pl.color]+
       '"></span> '+NAMES[pl.color]+(pl.bot?" (Bot)":" – du bist dran!");
-    awaiting=null; render();
+    awaiting=null; enterBtn.style.display="none"; render();
     if(pl.bot){ rollBtn.disabled=true; hintEl.textContent="Bot überlegt …";
       setTimeout(doRoll,800);
     }else{ rollBtn.disabled=false; hintEl.textContent="Drücke „Würfeln“."; }
@@ -365,7 +370,7 @@
   rollBtn.onclick=()=>{ if(!busy && !curPlayer().bot) doRoll(); };
 
   function doRoll(){
-    if(busy) return; busy=true; awaiting=null; rollBtn.disabled=true;
+    if(busy) return; busy=true; awaiting=null; enterBtn.style.display="none"; rollBtn.disabled=true;
     dieEl.classList.add("rolling");
     let t=0;
     const iv=setInterval(()=>{
@@ -408,11 +413,11 @@
     const mv=[];
     if(sym==="flower"){
       const base=own.filter(p=>p.state==="base");
-      // enter on flower – unless your own start cell is already taken by your chip
-      if(base.length && !occupiedByOwn(START[color],color)){
-        mv.push({piece:base[0],type:"enter"}); return mv;
-      }
-      // else flower acts as a normal field symbol (move another chip instead)
+      // 🌸 lets you bring a new chip in (unless your start cell is blocked by
+      // your own chip) – AND/OR move an existing chip to the next 🌸 cell
+      // (the move options are added by the loop below) → the player chooses
+      if(base.length && !occupiedByOwn(START[color],color))
+        mv.push({piece:base[0],type:"enter"});
     }
     own.filter(p=>p.state==="track").forEach(p=>{
       const k=stepsTo(p.pos,sym);
@@ -435,13 +440,20 @@
     const moves=legalMoves(pl.color,sym);
     if(moves.length===0){
       log(NAMES[pl.color]+" würfelt "+SYM[sym]+" "+SYM_NAME[sym]+
-          " – kein Zug (🌸 nötig zum Einsetzen).",pl.color);
-      busy=false; endTurn(false); return;
+          " – kein Zug möglich.",pl.color);
+      busy=false; endTurn(sym==="flower"); return;   // 🌸 still grants a re-roll
     }
     if(pl.bot){ applyMove(pickBotMove(moves),sym); return; }
     if(moves.length===1){ applyMove(moves[0],sym); return; }
     awaiting=moves; busy=false;
-    hintEl.textContent="Wähle eine leuchtende Figur ("+SYM[sym]+" "+SYM_NAME[sym]+").";
+    const enterM=moves.find(m=>m.type==="enter");
+    if(enterM){
+      enterBtn.style.display="block";
+      enterBtn.onclick=()=>chooseMove(enterM.piece);
+    }
+    hintEl.textContent="Wähle eine leuchtende Figur"+
+      (enterM?" – oder setze eine neue ein":"")+
+      " ("+SYM[sym]+" "+SYM_NAME[sym]+").";
     render();
   }
 
@@ -449,6 +461,7 @@
     if(!awaiting) return;
     const m=awaiting.find(x=>x.piece===piece);
     if(!m) return;
+    enterBtn.style.display="none";
     awaiting=null; busy=true; applyMove(m,lastRoll);
   }
 
@@ -463,12 +476,11 @@
 
   function applyMove(m,sym){
     const p=m.piece, col=p.color;
-    let extra=false;
+    const extra=(sym==="flower");   // 🌸 always grants another roll (chained)
     if(m.type==="enter"){
       p.state="track"; p.pos=START[col]; p.progress=0;
       captureAt(p.pos,col);
-      log(NAMES[col]+" setzt eine Figur ein. 🌸 (nochmal würfeln)",col);
-      extra=true;
+      log(NAMES[col]+" setzt eine neue Figur ein. 🌸 (nochmal würfeln)",col);
     }else if(m.finishes){
       p.state="done";
       log(NAMES[col]+" bringt eine Figur in den Endpunkt! 🏁",col);
@@ -494,13 +506,7 @@
 
   function endTurn(extra){
     if(gameOver) return;
-    if(extra){
-      flowerStreak++;
-      if(flowerStreak>=4){
-        log(NAMES[curPlayer().color]+" – genug 🌸, weiter geht's.",curPlayer().color);
-        flowerStreak=0; turn=(turn+1)%players.length;
-      }
-    }else{ flowerStreak=0; turn=(turn+1)%players.length; }
+    if(!extra) turn=(turn+1)%players.length;   // 🌸 → same player rolls again
     startTurn();
   }
 

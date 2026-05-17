@@ -21,9 +21,10 @@ tragen **6 Bilder**: 🌸 Blume · 🍄 Pilz · ⚽ Ball · 🐌 Schnecke · ⭐
 
 - **Bewegung – kein Zählen!** Du würfelst ein Symbol und ziehst deine Figur
   **vorwärts bis zum nächsten Feld, das genau dieses Symbol zeigt**.
-- **🌸 Blume = Einsetzen:** Bei der Blume kommt eine Figur auf dein farblich
-  passendes Ausgangsfeld (rote Figur → rotes Feld) – und du darfst gleich
-  noch einmal würfeln. So lange, bis alle Figuren im Spiel sind.
+- **🌸 Blume = Wahl + Extra-Wurf:** Du wählst – eine neue Figur einsetzen
+  *oder* eine Figur auf dem Brett zum nächsten 🌸-Feld ziehen. Danach darfst
+  du **noch einmal würfeln**; bei erneuter Blume geht es weiter, bis ein
+  anderes Symbol kommt.
 - **Nur 1 Figur pro Feld:** Steht auf dem Zielfeld schon eine *eigene* Figur,
   darf dort keine zweite hin – du musst eine andere Figur ziehen. Steht dort
   eine *fremde* Figur, wird sie geschlagen und muss neu eingesetzt werden.
